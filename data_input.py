@@ -96,7 +96,7 @@ class SegmentationDataset(Dataset):
             transformed = self.transform(image=image, mask=mask)
             image, mask = transformed["image"], transformed["mask"]
         mask = torch.tensor(mask, dtype=torch.long)
-
+        image = image / 255.0 
         return image, mask
 
 train_dataset = SegmentationDataset(train_paths_df, transform=transform)
