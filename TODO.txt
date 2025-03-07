@@ -1,0 +1,23 @@
+U-net pros and applications
+
+- preprocessing
+- types of u-net (which is better?)
+- check all transformations available and see that they dont affect the mask
+- Try overfitting the autoencoder
+
+WARNINGS: 
+    Be careful when augmenting data (i.e. in mirror padding  avoid padding labeled regions to the edges )
+    Don't do augmentation on the validation set
+
+    Usually, the aspect ratio will not necessarily be preserved when resizing images. However, you should make sure that it isn’t severely distorted—for example, changing an image from a 2:1 ratio to 1:2 could be undesirable.
+
+
+    Training:
+
+        Resize your training images to a consistent shape suitable for the model’s input requirements.
+        Validation and Testing:
+
+        Take an image from the validation/test set and resize it to the model’s input dimensions.
+        Run it through the model to get the predicted mask.
+        Resize (inverse-transform) the predicted mask back to the original resolution of the ground-truth label.
+        Compare the resized prediction to the ground truth to calculate your metrics.

@@ -40,7 +40,7 @@ class ConvBlock(nn.Module):
         return x, skip_connection
     
 class UpsamplingBlock(nn.Module):
-    def __init__(self, n_in_channels = 64, n_filters=64):
+    def __init__(self, n_in_channels = 64, n_filters=64, for_autoencoder = False):
         """
         Convolutional upsampling block
 
@@ -56,24 +56,31 @@ class UpsamplingBlock(nn.Module):
         # Convolutional layers after concatenation
         self.conv1 = nn.Conv2d(in_channels=n_filters * 2, out_channels=n_filters, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(in_channels=n_filters, out_channels=n_filters, kernel_size=3, padding=1)
+        self.for_autoencoder = for_autoencoder
 
-    def forward(self, expansive_input, contractive_input):
+    def forward(self, expansive_input, contractive_input = None):
+        if not self.for_autoencoder:
+            # Upsample the input
+            up = self.upconv(expansive_input)
 
-        up = self.upconv(expansive_input)
+            # Ensure spatial sizes match before concatenation
+            diffY = contractive_input.size()[2] - up.size()[2]
+            diffX = contractive_input.size()[3] - up.size()[3]
+            up = F.pad(up, [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2])
 
-        # Ensure spatial sizes match before concatenation
-        diffY = contractive_input.size()[2] - up.size()[2]
-        diffX = contractive_input.size()[3] - up.size()[3]
-        up = F.pad(up, [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2])
+            # Concatenate along the channel dimension
+            merge = torch.cat([up, contractive_input], dim=1)
 
-        # Concatenate along the channel dimension
-        merge = torch.cat([up, contractive_input], dim=1)
+            # Apply convolutions
+            conv = F.relu(self.conv1(merge))
+            conv = F.relu(self.conv2(conv))
 
-        # Apply convolutions
-        conv = F.relu(self.conv1(merge))
-        conv = F.relu(self.conv2(conv))
+            return conv
+        else:
+            # Upsample the input
+            up = self.upconv(expansive_input)
 
-        return conv
+            return up
 
 class UNet(nn.Module):
     def __init__(self, input_channels=3, n_filters=64, n_classes=4):
@@ -124,3 +131,43 @@ class UNet(nn.Module):
         conv10 = self.conv10(conv9)  # No activation (typically softmax is applied externally)
 
         return conv10
+    
+
+
+class Autoencoder(nn.Module):
+    def __init__(self, input_channels=3, n_filters=64):
+        super(Autoencoder, self).__init__()
+
+        # Encoder (same as U-Net’s encoder)
+        self.cblock1 = ConvBlock(n_in_channels=input_channels, n_filters=n_filters* 1)
+        self.cblock2 = ConvBlock(n_in_channels=n_filters * 1, n_filters=n_filters * 2)
+        self.cblock3 = ConvBlock(n_in_channels=n_filters * 2, n_filters=n_filters * 4)
+        self.cblock4 = ConvBlock(n_in_channels=n_filters * 4, n_filters=n_filters * 8, dropout_prob=0.3) # We might want to set droput to 0 since here overfit is beneficial
+        self.cblock5 = ConvBlock(n_in_channels=n_filters * 8, n_filters=n_filters * 16, dropout_prob=0.3, max_pooling=False)
+
+        # Decoder (reconstructs image without skip connections)
+        self.ublock6 = UpsamplingBlock(n_in_channels=n_filters * 16, n_filters=n_filters * 8, for_autoencoder = True)
+        self.ublock7 = UpsamplingBlock(n_in_channels=n_filters * 8, n_filters=n_filters * 4, for_autoencoder = True)
+        self.ublock8 = UpsamplingBlock(n_in_channels=n_filters * 4, n_filters=n_filters * 2, for_autoencoder = True)
+        self.ublock9 = UpsamplingBlock(n_in_channels=n_filters * 2, n_filters=n_filters, for_autoencoder = True)
+
+        # Final reconstruction layer (output's #channels is the same as input)
+        self.final_conv = nn.Conv2d(n_filters, input_channels, kernel_size=1)
+
+    def forward(self, x):
+        # Encoder
+        x, _ = self.cblock1(x)
+        x, _ = self.cblock2(x)
+        x, _ = self.cblock3(x)
+        x, _ = self.cblock4(x)
+        x, _ = self.cblock5(x)
+
+        # Decoder
+        x = self.ublock6(x)  # Skip connections removed
+        x = self.ublock7(x)
+        x = self.ublock8(x)
+        x = self.ublock9(x)
+
+        # Final reconstruction
+        x = self.final_conv(x)
+        return x

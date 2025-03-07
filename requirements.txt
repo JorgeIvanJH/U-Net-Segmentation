@@ -25,3 +25,7 @@ tqdm==4.66.1
 
 # Prompt-Based Segmentation (SAM)
 segment-anything==1.0
+
+albumentations
+
+torchviz
