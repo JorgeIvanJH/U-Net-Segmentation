@@ -142,8 +142,8 @@ class Autoencoder(nn.Module):
         self.cblock1 = ConvBlock(n_in_channels=input_channels, n_filters=n_filters* 1)
         self.cblock2 = ConvBlock(n_in_channels=n_filters * 1, n_filters=n_filters * 2)
         self.cblock3 = ConvBlock(n_in_channels=n_filters * 2, n_filters=n_filters * 4)
-        self.cblock4 = ConvBlock(n_in_channels=n_filters * 4, n_filters=n_filters * 8, dropout_prob=0.3) # We might want to set droput to 0 since here overfit is beneficial
-        self.cblock5 = ConvBlock(n_in_channels=n_filters * 8, n_filters=n_filters * 16, dropout_prob=0.3, max_pooling=False)
+        self.cblock4 = ConvBlock(n_in_channels=n_filters * 4, n_filters=n_filters * 8) # We might want to set droput to 0 since here overfit is beneficial
+        self.cblock5 = ConvBlock(n_in_channels=n_filters * 8, n_filters=n_filters * 16, max_pooling=False)
 
         # Decoder (reconstructs image without skip connections)
         self.ublock6 = UpsamplingBlock(n_in_channels=n_filters * 16, n_filters=n_filters * 8, for_autoencoder = True)
