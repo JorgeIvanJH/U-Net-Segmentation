@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import os
-from config import SEED, PATH_TRAINVAL, PATH_TEST, TRAIN_SIZE
+from config import SEED, PATH_TRAINVAL, PATH_TEST, TRAIN_SIZE, IMG_SIZE
 
 test_image_path = os.path.join(PATH_TEST, 'color/')
 test_mask_path = os.path.join(PATH_TEST, 'label/')
@@ -39,8 +39,8 @@ train_paths_df, val_paths_df = train_test_split(trainval_paths_df, train_size=TR
 
 transform = A.Compose(
     [
-        A.Resize(256, 256),  # Resize to 256x256
-        A.RandomCrop(width=240, height=240),
+        A.Resize(int(IMG_SIZE*1.1), int(IMG_SIZE*1.1)),  
+        A.RandomCrop(width=IMG_SIZE, height=IMG_SIZE, p=1.0), # Randomly crop image
         # A.Rotate(limit=35, p=1.0), # Rotate image
         # A.HorizontalFlip(p=0.5), # Flip image horizontally
         A.RGBShift(
