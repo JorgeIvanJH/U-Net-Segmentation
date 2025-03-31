@@ -18,12 +18,12 @@ import matplotlib.pyplot as plt
 
 # Custom utilities and configuration
 from utils import visualize, analyze
-from data_input import test_dataset,val_dataset,train_dataset
+from data_providers import test_dataset,val_dataset,train_dataset
 from config import PATH_TEST, PATH_TRAINVAL, SEED, BATCH_SIZE
 
 # NN Framework
 import torch
-from model import UNet
+from models.unet_model import UNet
 import torchviz
 
 # Set random seed for reproducibility
