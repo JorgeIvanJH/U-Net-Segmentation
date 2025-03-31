@@ -11,13 +11,13 @@ from config import SEED, PATH_TRAINVAL, PATH_TEST, TRAIN_SIZE, IMG_SIZE
 
 test_image_path = os.path.join(PATH_TEST, 'color/')
 test_mask_path = os.path.join(PATH_TEST, 'label/')
-test_image_list_orig = os.listdir(test_image_path)
-test_mask_list_orig = os.listdir(test_mask_path)
+test_image_list_orig = sorted(os.listdir(test_image_path))
+test_mask_list_orig = sorted(os.listdir(test_mask_path))
 
 trainval_image_path = os.path.join(PATH_TRAINVAL, 'color/')
 trainval_mask_path = os.path.join(PATH_TRAINVAL, 'label/')
-trainval_image_list_orig = os.listdir(trainval_image_path)
-trainval_mask_list_orig = os.listdir(trainval_mask_path)
+trainval_image_list_orig = sorted(os.listdir(trainval_image_path))
+trainval_mask_list_orig = sorted(os.listdir(trainval_mask_path))
 
 test_paths_df = pd.DataFrame({"images":test_image_list_orig,"masks": test_mask_list_orig})
 test_paths_df["path_images"] = test_image_path

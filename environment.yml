@@ -5,12 +5,12 @@ channels:
   - pytorch
 dependencies:
   - python=3.10
+  - pip
   - numpy=1.23.5
   - scipy=1.10.1
   - pandas=1.5.3
   - matplotlib=3.6.3
   - seaborn=0.12.2
-  - opencv-python=4.8.0.74
   - scikit-image=0.19.3
   - pillow=9.4.0
   - scikit-learn=1.2.2
@@ -23,3 +23,8 @@ dependencies:
       - imgaug==0.4.0
       - segment-anything==1.0
       - torchviz
+      - opencv-python==4.8.0.76
+      - streamlit==1.27.0
+      - plotly
+      - nbformat
+      - streamlit-drawable-canvas
