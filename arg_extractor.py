@@ -19,7 +19,7 @@ def get_args():
         description='Welcome to the MLP course\'s Pytorch training and inference helper script')
 
     parser.add_argument('--batch_size', nargs="?", type=int, default=100, help='Batch_size for experiment')
-    parser.add_argument('--continue_from_epoch', nargs="?", type=int, default=-1, help='Epoch you want to continue training from while restarting an experiment')
+    parser.add_argument('--continue_from_epoch', nargs="?", type=int, default=-1, help='Epoch you want to continue training from while restarting an experiment (from scrach (-1))')
     parser.add_argument('--seed', nargs="?", type=int, default=81820,
                         help='Seed to use for random number generator for experiment')
     parser.add_argument('--image_num_channels', nargs="?", type=int, default=3,
@@ -54,12 +54,6 @@ def get_args():
     return args
 
 # COMMANDS TO RUN
-# VGG38 (BASE)
-# python pytorch_mlp_framework/train_evaluate_image_classification_system.py --batch_size 100 --seed 0 --num_filters 32 --num_stages 3 --num_blocks_per_stage 5 --experiment_name VGG_38_experiment --use_gpu True --num_classes 100 --block_type 'conv_block' --continue_from_epoch -1
 
-# VGG38 BN (LR 1e-3)
-# python pytorch_mlp_framework/train_evaluate_image_classification_system.py --batch_size 100 --seed 0 --num_filters 32 --num_stages 3 --num_blocks_per_stage 5 --experiment_name VGG38_BN_experiment_lr1em3 --use_gpu True --num_classes 100 --block_type 'BN' --continue_from_epoch -1 --lr 1e-3
-
-# VGG38 BN + RC (LR 1e-2)
-# python pytorch_mlp_framework/train_evaluate_image_classification_system.py --batch_size 100 --seed 0 --num_filters 32 --num_stages 3 --num_blocks_per_stage 5 --experiment_name VGG38_BN_RC_experiment_lr1em2 --use_gpu True --num_classes 100 --block_type 'BN_RC' --continue_from_epoch -1 --lr 1e-2
-
+# TestModel (BASE)
+# python train_evaluate_image_classification_system.py --num_epochs 5 --batch_size 4 --num_filters 32 --num_classes 4 --experiment_name TestModel_experiment --use_gpu False --continue_from_epoch -1
