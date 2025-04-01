@@ -12,9 +12,31 @@ from matplotlib import pyplot as plt
 import matplotlib
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
+from collections import Counter
 
 matplotlib.rcParams.update({"font.size": 8})
 
+def compute_class_weights(loader, num_classes=4):
+    class_counts = Counter()
+    for _, mask in loader:
+        unique_classes, counts = torch.unique(mask, return_counts=True)
+        for cls, count in zip(unique_classes.tolist(), counts.tolist()):
+            class_counts[cls] += count
+
+    total_pixels = sum(class_counts.values())
+    class_weights = []
+
+    for i in range(num_classes):
+        if i in class_counts:
+            freq = class_counts[i] / total_pixels
+            weight = 1.0 / (freq + 1e-6)
+        else:
+            weight = 0.0  # no aparece esa clase
+        class_weights.append(weight)
+
+    class_weights = torch.tensor(class_weights, dtype=torch.float32)
+    class_weights = class_weights * (num_classes / class_weights.sum())
+    return class_weights
 
 class ExperimentBuilder(nn.Module):
     def __init__(
@@ -88,7 +110,10 @@ class ExperimentBuilder(nn.Module):
         )
 
         # Loss function
-        self.loss_criterion = nn.CrossEntropyLoss() # GIVE WEIGHT ACCORDIG TO CLASS!!!!!!!
+        class_weights = compute_class_weights(self.val_data, network_model.n_classes)
+        if use_gpu:
+            class_weights = class_weights.to(self.device)
+        self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights) # Classes weighted by their frequency in the dataset
 
         # Generate the directory names
         self.experiment_folder = os.path.abspath(experiment_name)

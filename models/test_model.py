@@ -14,7 +14,8 @@ class TestModel(nn.Module):
             n_classes -- Number of output classes
         """
         super(TestModel, self).__init__()
-
+        self.n_classes = n_classes
+        
         # Convolutions
         self.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=n_filters, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(in_channels=n_filters, out_channels=n_filters, kernel_size=3, padding=1)

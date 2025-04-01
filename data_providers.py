@@ -86,6 +86,8 @@ class SegmentationDataset(Dataset):
         mask_path = self.dataframe.iloc[idx]["path_masks"]
 
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)  # Image
+        if image is None:
+            raise FileNotFoundError(f"Could not load image at path: {image_path}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         mask = cv2.imread(mask_path, cv2.IMREAD_COLOR)  # Mask
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
@@ -95,7 +97,7 @@ class SegmentationDataset(Dataset):
         if self.transform:
             transformed = self.transform(image=image, mask=mask)
             image, mask = transformed["image"], transformed["mask"]
-        mask = torch.tensor(mask, dtype=torch.long)
+        mask = mask.clone().detach().long()
         image = image / 255.0 
         return image, mask
 
