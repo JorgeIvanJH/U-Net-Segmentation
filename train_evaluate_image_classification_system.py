@@ -16,9 +16,9 @@ args = get_args()  # get arguments from command line
 rng = np.random.RandomState(seed=args.seed)  # set the seeds for the experiment
 torch.manual_seed(seed=args.seed)  # sets pytorch's seed
 
-train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=2)
-val_data_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=2)
-test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=2)
+train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+val_data_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
 custom_conv_net = TestModel(input_channels = args.image_num_channels,
           n_filters = args.num_filters, 

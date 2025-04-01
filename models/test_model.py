@@ -22,8 +22,8 @@ class TestModel(nn.Module):
         self.dropout = nn.Dropout2d(p=dropout_prob) if dropout_prob > 0 else None
 
         # Deconvolution
-        self.upconv1 = nn.ConvTranspose2d(in_channels=n_filters, out_channels=n_filters, kernel_size=3, stride=2, padding=1, output_padding=1)
-        self.upconv2 = nn.ConvTranspose2d(in_channels=n_filters, out_channels=n_filters, kernel_size=3, stride=2, padding=1, output_padding=1)
+        self.upconv1 = nn.ConvTranspose2d(in_channels=n_filters, out_channels=n_filters, kernel_size=3, padding=1)
+        self.upconv2 = nn.ConvTranspose2d(in_channels=n_filters, out_channels=n_filters, kernel_size=3, padding=1)
 
         self.final_conv = nn.Conv2d(in_channels=n_filters, out_channels=n_classes, kernel_size=1)
 

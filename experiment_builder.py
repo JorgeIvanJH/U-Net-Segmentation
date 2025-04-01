@@ -7,7 +7,7 @@ import os
 import numpy as np
 import time
 
-from pytorch_mlp_framework.storage_utils import save_statistics
+from storage_utils import save_statistics
 from matplotlib import pyplot as plt
 import matplotlib
 from matplotlib.colors import Normalize
@@ -60,7 +60,6 @@ class ExperimentBuilder(nn.Module):
 
         print("here")
 
-        self.model.reset_parameters()  # re-initialize network parameters
         self.train_data = train_data
         self.val_data = val_data
         self.test_data = test_data
@@ -87,6 +86,10 @@ class ExperimentBuilder(nn.Module):
         self.learning_rate_scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=num_epochs, eta_min=0.00002
         )
+
+        # Loss function
+        self.loss_criterion = nn.CrossEntropyLoss() # GIVE WEIGHT ACCORDIG TO CLASS!!!!!!!
+
         # Generate the directory names
         self.experiment_folder = os.path.abspath(experiment_name)
         self.experiment_logs = os.path.abspath(
@@ -211,12 +214,10 @@ class ExperimentBuilder(nn.Module):
     def run_train_iter(self, x, y):
 
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
-        x, y = x.float().to(device=self.device), y.long().to(
-            device=self.device
-        )  # send data to device as torch tensors
-        out = self.model.forward(x)  # forward the data in the model
+        x, y = x.to(device=self.device), y.to(device=self.device)  # send data to device as torch tensors
+        out = self.model(x)  # forward the data in the model
 
-        loss = F.cross_entropy(input=out, target=y)  # compute loss
+        loss = self.loss_criterion(out, y)  # compute loss
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
@@ -224,9 +225,14 @@ class ExperimentBuilder(nn.Module):
         self.optimizer.step()  # update network parameters
         self.learning_rate_scheduler.step()  # update learning rate scheduler
 
-        _, predicted = torch.max(out.data, 1)  # get argmax of predictions
-        accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
-        return loss.cpu().data.numpy(), accuracy
+        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
+
+        # Compute Intersection over Union
+        intersection = torch.sum(predictions.reshape(-1) == y.reshape(-1)) 
+        union = len(predictions) + len(y) - intersection
+        iou = intersection / union if union != 0 else 0.0
+
+        return loss.item(), iou
 
     def run_evaluation_iter(self, x, y):
         """
@@ -236,16 +242,19 @@ class ExperimentBuilder(nn.Module):
         :return: the loss and accuracy for this batch
         """
         self.eval()  # sets the system to validation mode
-        x, y = x.float().to(device=self.device), y.long().to(
-            device=self.device
-        )  # convert data to pytorch tensors and send to the computation device
-        out = self.model.forward(x)  # forward the data in the model
+        x, y = x.to(device=self.device), y.to(device=self.device)  # convert data to pytorch tensors and send to the computation device
+        out = self.model(x)  # forward the data in the model
 
-        loss = F.cross_entropy(input=out, target=y)  # compute loss
+        loss = self.loss_criterion(out, y)  # compute loss
 
-        _, predicted = torch.max(out.data, 1)  # get argmax of predictions
-        accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
-        return loss.cpu().data.numpy(), accuracy
+        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
+
+        # Compute Intersection over Union
+        intersection = torch.sum(predictions.reshape(-1) == y.reshape(-1)) 
+        union = len(predictions) + len(y) - intersection
+        iou = intersection / union if union != 0 else 0.0
+
+        return loss.item(), iou
 
     def save_model(
         self,
@@ -321,9 +330,9 @@ class ExperimentBuilder(nn.Module):
             with tqdm.tqdm(
                 total=len(self.train_data)
             ) as pbar_train:  # create a progress bar for training
-                for idx, (x, y) in enumerate(self.train_data):  # get data batches
+                for idx, (images, masks) in enumerate(self.train_data):  # get data batches
                     loss, accuracy = self.run_train_iter(
-                        x=x, y=y
+                        x=images, y=masks
                     )  # take a training iter step
                     current_epoch_losses["train_loss"].append(
                         loss

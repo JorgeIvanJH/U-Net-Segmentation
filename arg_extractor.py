@@ -49,6 +49,8 @@ def get_args():
                         help='Type of convolutional blocks to use in our network '
                              '(This argument will be useful in running experiments to debug your network)')
     parser.add_argument('--lr', nargs="?", type=float, default=1e-3, help='Learning rate for optimizer')
+    parser.add_argument('--num_workers', nargs="?", type=int, default=0,
+                        help='Number of workers to use for data loading')
     args = parser.parse_args()
     print(args)
     return args
@@ -56,4 +58,4 @@ def get_args():
 # COMMANDS TO RUN
 
 # TestModel (BASE)
-# python train_evaluate_image_classification_system.py --num_epochs 5 --batch_size 4 --num_filters 32 --num_classes 4 --experiment_name TestModel_experiment --use_gpu False --continue_from_epoch -1
+# python train_evaluate_image_classification_system.py --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --experiment_name TestModel_experiment --use_gpu False --continue_from_epoch -1
