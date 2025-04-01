@@ -7,6 +7,7 @@ __pycache__/
 # C extensions
 *.so
 Dataset/
+point_prompt_dataset/
 weights/*
 *.jpg
 *.png
