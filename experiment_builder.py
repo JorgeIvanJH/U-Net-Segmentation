@@ -110,10 +110,12 @@ class ExperimentBuilder(nn.Module):
         )
 
         # Loss function
-        class_weights = compute_class_weights(self.val_data, network_model.n_classes)
+        class_weights = compute_class_weights(self.val_data, network_model.n_classes) # Classes weighted by their frequency in the dataset
         if use_gpu:
             class_weights = class_weights.to(self.device)
-        self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights) # Classes weighted by their frequency in the dataset
+        self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights).to(
+            self.device
+        )  # send the loss computation to the GPU 
 
         # Generate the directory names
         self.experiment_folder = os.path.abspath(experiment_name)
@@ -138,9 +140,7 @@ class ExperimentBuilder(nn.Module):
             )  # create the experiment saved models directory
 
         self.num_epochs = num_epochs
-        self.criterion = nn.CrossEntropyLoss().to(
-            self.device
-        )  # send the loss computation to the GPU
+        
 
         if (
             continue_from_epoch == -2
@@ -176,7 +176,7 @@ class ExperimentBuilder(nn.Module):
 
         return total_num_params
 
-    def plot_func_def(self, all_grads, layers, epoch, numepochs=100):
+    def plot_func_def(self, all_grads, layers, epoch):
         """
         Plot function definition to plot the average gradient with respect to the number of layers in the given model
         :param all_grads: Gradients wrt weights for each layer in the model.
@@ -185,7 +185,7 @@ class ExperimentBuilder(nn.Module):
         """
         
         colormap = matplotlib.cm.get_cmap("viridis") 
-        color = colormap(epoch / numepochs) 
+        color = colormap(epoch / self.num_epochs) 
         plt.plot(all_grads, alpha=0.7, color=color)
         plt.hlines(0, 0, len(all_grads) + 1, linewidth=1, color="k")
         plt.xticks(range(0, len(all_grads), 1), layers, rotation="vertical")
@@ -250,9 +250,8 @@ class ExperimentBuilder(nn.Module):
         self.optimizer.step()  # update network parameters
         self.learning_rate_scheduler.step()  # update learning rate scheduler
 
-        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
-
         # Compute Intersection over Union
+        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
         intersection = torch.sum(predictions.reshape(-1) == y.reshape(-1)) 
         union = len(predictions) + len(y) - intersection
         iou = intersection / union if union != 0 else 0.0
@@ -260,21 +259,16 @@ class ExperimentBuilder(nn.Module):
         return loss.item(), iou
 
     def run_evaluation_iter(self, x, y):
-        """
-        Receives the inputs and targets for the model and runs an evaluation iterations. Returns loss and accuracy metrics.
-        :param x: The inputs to the model. A numpy array of shape batch_size, channels, height, width
-        :param y: The targets for the model. A numpy array of shape batch_size, num_classes
-        :return: the loss and accuracy for this batch
-        """
+
+
         self.eval()  # sets the system to validation mode
         x, y = x.to(device=self.device), y.to(device=self.device)  # convert data to pytorch tensors and send to the computation device
         out = self.model(x)  # forward the data in the model
 
         loss = self.loss_criterion(out, y)  # compute loss
 
-        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
-
         # Compute Intersection over Union
+        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
         intersection = torch.sum(predictions.reshape(-1) == y.reshape(-1)) 
         union = len(predictions) + len(y) - intersection
         iou = intersection / union if union != 0 else 0.0
@@ -346,9 +340,9 @@ class ExperimentBuilder(nn.Module):
         for i, epoch_idx in enumerate(range(self.starting_epoch, self.num_epochs)):
             epoch_start_time = time.time()
             current_epoch_losses = {
-                "train_acc": [],
+                "train_iou": [],
                 "train_loss": [],
-                "val_acc": [],
+                "val_iou": [],
                 "val_loss": [],
             }
             self.current_epoch = epoch_idx
@@ -356,38 +350,38 @@ class ExperimentBuilder(nn.Module):
                 total=len(self.train_data)
             ) as pbar_train:  # create a progress bar for training
                 for idx, (images, masks) in enumerate(self.train_data):  # get data batches
-                    loss, accuracy = self.run_train_iter(
+                    loss, iou = self.run_train_iter(
                         x=images, y=masks
                     )  # take a training iter step
                     current_epoch_losses["train_loss"].append(
                         loss
                     )  # add current iter loss to the train loss list
-                    current_epoch_losses["train_acc"].append(
-                        accuracy
+                    current_epoch_losses["train_iou"].append(
+                        iou
                     )  # add current iter acc to the train acc list
                     pbar_train.update(1)
                     pbar_train.set_description(
-                        "loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy)
+                        "loss: {:.4f}, iou: {:.4f}".format(loss, iou)
                     )
 
             with tqdm.tqdm(
                 total=len(self.val_data)
             ) as pbar_val:  # create a progress bar for validation
                 for x, y in self.val_data:  # get data batches
-                    loss, accuracy = self.run_evaluation_iter(
+                    loss, iou = self.run_evaluation_iter(
                         x=x, y=y
                     )  # run a validation iter
                     current_epoch_losses["val_loss"].append(
                         loss
                     )  # add current iter loss to val loss list.
-                    current_epoch_losses["val_acc"].append(
-                        accuracy
+                    current_epoch_losses["val_iou"].append(
+                        iou
                     )  # add current iter acc to val acc lst.
                     pbar_val.update(1)  # add 1 step to the progress bar
                     pbar_val.set_description(
-                        "loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy)
+                        "loss: {:.4f}, iou: {:.4f}".format(loss, iou)
                     )
-            val_mean_accuracy = np.mean(current_epoch_losses["val_acc"])
+            val_mean_accuracy = np.mean(current_epoch_losses["val_iou"])
             if (
                 val_mean_accuracy > self.best_val_model_acc
             ):  # if current epoch's mean val acc is greater than the saved best val acc then
@@ -454,7 +448,7 @@ class ExperimentBuilder(nn.Module):
 
             ### Adding a colorbar to the plot to show the epochs
             if ruonceflag==True:
-                numepochs = 100
+                numepochs = self.num_epochs
                 colormap = matplotlib.cm.get_cmap("viridis") 
                 norm = Normalize(vmin=1, vmax=numepochs)
                 sm = ScalarMappable(cmap=colormap, norm=norm)
@@ -499,19 +493,19 @@ class ExperimentBuilder(nn.Module):
             model_save_name="train_model",
         )
         current_epoch_losses = {
-            "test_acc": [],
+            "test_iou": [],
             "test_loss": [],
         }  # initialize a statistics dict
         with tqdm.tqdm(total=len(self.test_data)) as pbar_test:  # ini a progress bar
             for x, y in self.test_data:  # sample batch
-                loss, accuracy = self.run_evaluation_iter(
+                loss, iou = self.run_evaluation_iter(
                     x=x, y=y
-                )  # compute loss and accuracy by running an evaluation step
+                )  # compute loss and iou by running an evaluation step
                 current_epoch_losses["test_loss"].append(loss)  # save test loss
-                current_epoch_losses["test_acc"].append(accuracy)  # save test accuracy
+                current_epoch_losses["test_iou"].append(iou)  # save test iou
                 pbar_test.update(1)  # update progress bar status
                 pbar_test.set_description(
-                    "loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy)
+                    "loss: {:.4f}, iou: {:.4f}".format(loss, iou)
                 )  # update progress bar string output
 
         test_losses = {
