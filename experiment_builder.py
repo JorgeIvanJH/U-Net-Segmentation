@@ -252,7 +252,9 @@ class ExperimentBuilder(nn.Module):
 
         # Compute Intersection over Union
         predictions = torch.argmax(out, dim=1)  # get argmax of predictions
-        intersection = torch.sum(predictions.reshape(-1) == y.reshape(-1)) 
+        predictions = predictions.view(-1)  # flatten the predictions
+        y = y.view(-1)  # flatten the ground truth labels
+        intersection = torch.sum(predictions == y) 
         union = len(predictions) + len(y) - intersection
         iou = intersection / union if union != 0 else 0.0
 
@@ -269,7 +271,9 @@ class ExperimentBuilder(nn.Module):
 
         # Compute Intersection over Union
         predictions = torch.argmax(out, dim=1)  # get argmax of predictions
-        intersection = torch.sum(predictions.reshape(-1) == y.reshape(-1)) 
+        predictions = predictions.view(-1)  # flatten the predictions
+        y = y.view(-1)  # flatten the ground truth labels
+        intersection = torch.sum(predictions == y) 
         union = len(predictions) + len(y) - intersection
         iou = intersection / union if union != 0 else 0.0
 
@@ -332,9 +336,9 @@ class ExperimentBuilder(nn.Module):
         """
         ruonceflag=True
         total_losses = {
-            "train_acc": [],
+            "train_iou": [],
             "train_loss": [],
-            "val_acc": [],
+            "val_iou": [],
             "val_loss": [],
         }  # initialize a dict to keep the per-epoch metrics
         for i, epoch_idx in enumerate(range(self.starting_epoch, self.num_epochs)):
