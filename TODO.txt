@@ -1,9 +1,9 @@
 U-net pros and applications
 
-- preprocessing
-- types of u-net (which is better?)
 - check all transformations available and see that they dont affect the mask
-- Try overfitting the autoencoder
+- Fix Gradient Flow Plot (# epochs)
+- Fix metrics
+- FIX Corrupt JPEG data: premature end of data segment
 
 WARNINGS: 
     Be careful when augmenting data (i.e. in mirror padding  avoid padding labeled regions to the edges )
@@ -21,3 +21,4 @@ WARNINGS:
         Run it through the model to get the predicted mask.
         Resize (inverse-transform) the predicted mask back to the original resolution of the ground-truth label.
         Compare the resized prediction to the ground truth to calculate your metrics.
+
