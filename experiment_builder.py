@@ -236,6 +236,24 @@ class ExperimentBuilder(nn.Module):
 
         return plt
 
+    def iou_score(self, y_pred, y_true):
+
+        # Convert predictions to class indices
+        y_pred = torch.argmax(y_pred, dim=1)
+
+        # Flatten the tensors
+        y_pred_flat = y_pred.view(-1)
+        y_true_flat = y_true.view(-1)
+
+        # Compute intersection and union
+        intersection = torch.sum(y_pred_flat == y_true_flat).item()
+        union = len(y_pred_flat) + len(y_true_flat) - intersection
+
+        # Compute IoU
+        iou = intersection / union if union != 0 else 0.0
+
+        return iou
+
     def run_train_iter(self, x, y):
 
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
@@ -251,12 +269,7 @@ class ExperimentBuilder(nn.Module):
         self.learning_rate_scheduler.step()  # update learning rate scheduler
 
         # Compute Intersection over Union
-        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
-        predictions = predictions.view(-1)  # flatten the predictions
-        y = y.view(-1)  # flatten the ground truth labels
-        intersection = torch.sum(predictions == y) 
-        union = len(predictions) + len(y) - intersection
-        iou = intersection / union if union != 0 else 0.0
+        iou = self.iou_score(out, y)  # get iou score for current iter
 
         return loss.item(), iou
 
@@ -270,12 +283,7 @@ class ExperimentBuilder(nn.Module):
         loss = self.loss_criterion(out, y)  # compute loss
 
         # Compute Intersection over Union
-        predictions = torch.argmax(out, dim=1)  # get argmax of predictions
-        predictions = predictions.view(-1)  # flatten the predictions
-        y = y.view(-1)  # flatten the ground truth labels
-        intersection = torch.sum(predictions == y) 
-        union = len(predictions) + len(y) - intersection
-        iou = intersection / union if union != 0 else 0.0
+        iou = self.iou_score(out, y)  # get iou score for current iter
 
         return loss.item(), iou
 
