@@ -74,24 +74,18 @@ class ExperimentBuilder(nn.Module):
         if torch.cuda.device_count() >= 1 and use_gpu:
             self.device = torch.device("cuda")
             self.model.to(self.device)  # sends the model from the cpu to the gpu
-            print("Use GPU", self.device)
         else:
-            print("use CPU")
             self.device = torch.device("cpu")  # sets the device to be CPU
-            print(self.device)
-
-        print("here")
+        print("Using ",self.device)
 
         self.train_data = train_data
         self.val_data = val_data
         self.test_data = test_data
 
-        print("System learnable parameters")
         num_conv_layers = 0
         num_linear_layers = 0
         total_num_parameters = 0
         for name, value in self.named_parameters():
-            print(name, value.shape)
             if all(item in name for item in ["conv", "weight"]):
                 num_conv_layers += 1
             if all(item in name for item in ["linear", "weight"]):

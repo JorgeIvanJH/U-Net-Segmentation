@@ -1,5 +1,6 @@
 import argparse
 
+available_models = ['TestModel', 'UNet']
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -51,6 +52,8 @@ def get_args():
     parser.add_argument('--lr', nargs="?", type=float, default=1e-3, help='Learning rate for optimizer')
     parser.add_argument('--num_workers', nargs="?", type=int, default=0,
                         help='Number of workers to use for data loading')
+    parser.add_argument('--model_name', type=str, default='TestModel',
+                        help=f'Name of the model to use for training. This should be one of {available_models}')
     args = parser.parse_args()
     print(args)
     return args
@@ -58,4 +61,6 @@ def get_args():
 # COMMANDS TO RUN
 
 # TestModel (BASE)
-# python train_evaluate_image_classification_system.py --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --experiment_name TestModel_experiment --use_gpu False --continue_from_epoch -1
+# python train_evaluate_image_classification_system.py --model_name TestModel --experiment_name simple_experiment --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --use_gpu False --continue_from_epoch -1
+# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_experiment --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --use_gpu False --continue_from_epoch -1
+# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_experiment_nf64 --num_epochs 20 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -1

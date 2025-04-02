@@ -6,11 +6,6 @@ from torchvision import transforms
 from data_providers import test_dataset,val_dataset,train_dataset
 from arg_extractor import get_args
 from experiment_builder import ExperimentBuilder
-from models.test_model import TestModel
-from models.unet_model import UNet
-
-import os 
-# os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 args = get_args()  # get arguments from command line
 rng = np.random.RandomState(seed=args.seed)  # set the seeds for the experiment
@@ -20,14 +15,23 @@ train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffl
 val_data_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
-custom_conv_net = TestModel(input_channels = args.image_num_channels,
+# Define the model
+assert args.model_name in ['TestModel', 'UNet'], "Invalid model name. Choose either 'TestModel' or 'UNet'."
+if args.model_name == 'TestModel':
+    from models.test_model import TestModel
+    nn_model = TestModel(input_channels = args.image_num_channels,
           n_filters = args.num_filters, 
           dropout_prob = 0, 
           n_classes = args.num_classes)
+elif args.model_name == 'UNet':
+    from models.unet_model import UNet
+    nn_model = UNet(input_channels = args.image_num_channels,
+          n_filters = args.num_filters, 
+          n_classes = args.num_classes)
 
 
-conv_experiment = ExperimentBuilder(network_model=custom_conv_net,
-                                    experiment_name=args.experiment_name,
+conv_experiment = ExperimentBuilder(network_model=nn_model,
+                                    experiment_name=args.model_name + "_" + args.experiment_name,
                                     num_epochs=args.num_epochs,
                                     weight_decay_coefficient=args.weight_decay_coefficient,
                                     use_gpu=args.use_gpu,

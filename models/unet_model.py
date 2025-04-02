@@ -94,6 +94,8 @@ class UNet(nn.Module):
         """
         super(UNet, self).__init__()
 
+        self.n_classes = n_classes
+
         # Contracting Path (Encoder)
         self.cblock1 = ConvBlock(n_in_channels=input_channels, n_filters=n_filters* 1)
         self.cblock2 = ConvBlock(n_in_channels=n_filters * 1, n_filters=n_filters * 2)
