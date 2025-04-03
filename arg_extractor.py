@@ -1,6 +1,6 @@
 import argparse
 
-available_models = ['TestModel', 'UNet']
+available_models = ['TestModel', 'UNet', 'CLIP']
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -63,4 +63,8 @@ def get_args():
 # TestModel (BASE)
 # python train_evaluate_image_classification_system.py --model_name TestModel --experiment_name simple_experiment --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --use_gpu False --continue_from_epoch -1
 # python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_experiment --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --use_gpu False --continue_from_epoch -1
-# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_experiment_nf64 --num_epochs 20 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -1
+# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_nf64_experiment --num_epochs 20 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -1
+
+
+# CLIP
+#  python train_evaluate_image_classification_system.py --model_name CLIP --experiment_name CLIP_experiment --num_epochs 20 --num_workers 0 --batch_size 4 --num_classes 4 --use_gpu False --continue_from_epoch -1

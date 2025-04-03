@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from data_providers import test_dataset,val_dataset,train_dataset
-from arg_extractor import get_args
+from arg_extractor import get_args, available_models
 from experiment_builder import ExperimentBuilder
 
 args = get_args()  # get arguments from command line
@@ -16,7 +16,7 @@ val_data_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=Tr
 test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
 # Define the model
-assert args.model_name in ['TestModel', 'UNet'], "Invalid model name. Choose either 'TestModel' or 'UNet'."
+assert args.model_name in available_models, f"Invalid model name. must be one of {available_models}"
 if args.model_name == 'TestModel':
     from models.test_model import TestModel
     nn_model = TestModel(input_channels = args.image_num_channels,
@@ -28,6 +28,10 @@ elif args.model_name == 'UNet':
     nn_model = UNet(input_channels = args.image_num_channels,
           n_filters = args.num_filters, 
           n_classes = args.num_classes)
+elif args.model_name == 'CLIP':
+    from models.clip_based_unet import CLIPResnetSegmentationModel
+    device = torch.device("cuda" if (torch.cuda.is_available() and args.use_gpu) else "cpu")
+    nn_model = CLIPResnetSegmentationModel(device, args.num_classes)
 
 
 conv_experiment = ExperimentBuilder(network_model=nn_model,

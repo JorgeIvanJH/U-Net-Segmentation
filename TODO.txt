@@ -22,3 +22,15 @@ WARNINGS:
         Resize (inverse-transform) the predicted mask back to the original resolution of the ground-truth label.
         Compare the resized prediction to the ground truth to calculate your metrics.
 
+gcloud compute scp /path/to/local/file.csv your-vm-name:~/ --zone=your-vm-zone --project=your-project-id
+gcloud compute scp ./my_dataset.zip computervisionsegmentation:~/ --zone=us-central1-c --project=digital-well-455416-f7
+gcloud compute scp ./my_dataset.zip computervisionsegmentation:/home/erikasalinas581/data/ --zone=us-central1-c --project=digital-well-455416-f7
+
+
+MY COMMAND:
+gcloud compute scp Dataset.zip computervisionsegmentation:/home/erikasalinas581/U-Net-Segmentation/ --zone=us-central1-c --project=digital-well-455416-f7
+
+
+computervisionsegmentation
+us-central1-c
+digital-well-455416-f7
