@@ -103,7 +103,7 @@ class SegmentationDataset(Dataset):
             image, mask = transformed["image"], transformed["mask"]
         mask = mask.clone().detach().long()
         image = image / 255.0 
-        return image, mask, None
+        return image, mask, image*0 # image*0 is a placeholder for the heatmap in the data providers for prompt based unet
 
 train_dataset = SegmentationDataset(train_paths_df, transform=transform)
 val_dataset = SegmentationDataset(val_paths_df, transform=transform)
