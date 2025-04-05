@@ -54,6 +54,8 @@ def get_args():
                         help='Number of workers to use for data loading')
     parser.add_argument('--model_name', type=str, default='TestModel',
                         help=f'Name of the model to use for training. This should be one of {available_models}')
+    parser.add_argument('--load_encoder_weights', type=str2bool, default=False,
+                        help='A flag indicating whether to load encoder weights from a pretrained model')
     args = parser.parse_args()
     print(args)
     return args
@@ -65,6 +67,9 @@ def get_args():
 # python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_experiment --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --use_gpu False --continue_from_epoch -1
 # python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_nf64_experiment --num_epochs 20 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -1
 
+# UNET (AUTOENCODER ENCODER)
+# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name unet_w_autoencoder_experiment --load_encoder_weights True --num_epochs 40 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -1
 
-# CLIP
+
+# UNET (CLIP ENCODER)
 #  python train_evaluate_image_classification_system.py --model_name CLIP --experiment_name CLIP_experiment --num_epochs 20 --num_workers 0 --batch_size 4 --num_classes 4 --use_gpu False --continue_from_epoch -1
