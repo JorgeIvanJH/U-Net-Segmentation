@@ -1,6 +1,6 @@
 import argparse
 
-available_models = ['TestModel', 'UNet', 'CLIP']
+available_models = ['TestModel', 'UNet', 'CLIP', 'PromptUNet']
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -72,4 +72,7 @@ def get_args():
 
 
 # UNET (CLIP ENCODER)
-#  python train_evaluate_image_classification_system.py --model_name CLIP --experiment_name CLIP_experiment --num_epochs 20 --num_workers 0 --batch_size 4 --num_classes 4 --use_gpu False --continue_from_epoch -1
+#  python train_evaluate_image_classification_system.py --model_name CLIP --experiment_name CLIP_experiment --num_epochs 40 --num_workers 0 --batch_size 4 --num_classes 4 --use_gpu False --continue_from_epoch -1
+
+# PROMPT UNET (CLIP ENCODER)
+# python train_evaluate_image_classification_system.py --model_name PromptUNet --experiment_name PromptUNet_experiment --num_epochs 40 --num_workers 0 --batch_size 4 --num_classes 4 --use_gpu False --continue_from_epoch -1

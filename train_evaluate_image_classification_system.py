@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from data_providers import test_dataset,val_dataset,train_dataset
+from Datasets.Segmentation.data_providers import test_dataset,val_dataset,train_dataset
 from arg_extractor import get_args, available_models
 from experiment_builder import ExperimentBuilder
 
@@ -61,6 +61,19 @@ elif args.model_name == 'CLIP':
     nn_model = CLIPResnetSegmentationModel(device, args.num_classes)
     print("Unet with CLIP's encoder weights ready")
 
+elif args.model_name == 'PromptUNet':
+    from models.prompt_based_unet import PromptUNet
+    device = torch.device("cuda" if (torch.cuda.is_available() and args.use_gpu) else "cpu")
+    nn_model = PromptUNet(device, args.num_classes)
+    print("Promp Based Unet with CLIP's encoder weights ready")
+
+    # For this model the data changes a bit, hence:
+    from Datasets.Prompt_based_segmentation.data_providers import test_dataset,val_dataset,train_dataset
+    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    val_data_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+
+
 
 conv_experiment = ExperimentBuilder(network_model=nn_model,
                                     experiment_name=args.model_name + "_" + args.experiment_name,
@@ -71,5 +84,6 @@ conv_experiment = ExperimentBuilder(network_model=nn_model,
                                     train_data=train_data_loader, val_data=val_data_loader,
                                     test_data=test_data_loader,
                                     lr = args.lr,
+                                    model_name = args.model_name,
                                     )  # build an experiment object
 experiment_metrics, test_metrics = conv_experiment.run_experiment()  # run experiment and return experiment metrics

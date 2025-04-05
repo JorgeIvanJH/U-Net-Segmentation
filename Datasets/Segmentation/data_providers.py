@@ -7,7 +7,11 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import os
-from config import SEED, PATH_TRAINVAL, PATH_TEST, TRAIN_SIZE, IMG_SIZE
+from config import SEED, TRAIN_SIZE, IMG_SIZE
+
+
+PATH_TRAINVAL = 'Datasets/Segmentation/TrainVal'
+PATH_TEST = 'Datasets/Segmentation/Test'
 
 test_image_path = os.path.join(PATH_TEST, 'color/')
 test_mask_path = os.path.join(PATH_TEST, 'label/')
@@ -99,7 +103,7 @@ class SegmentationDataset(Dataset):
             image, mask = transformed["image"], transformed["mask"]
         mask = mask.clone().detach().long()
         image = image / 255.0 
-        return image, mask
+        return image, mask, None
 
 train_dataset = SegmentationDataset(train_paths_df, transform=transform)
 val_dataset = SegmentationDataset(val_paths_df, transform=transform)

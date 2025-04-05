@@ -18,7 +18,7 @@ matplotlib.rcParams.update({"font.size": 8})
 
 def compute_class_weights(loader, num_classes=4):
     class_counts = Counter()
-    for _, mask in loader:
+    for _, mask, _ in loader:
         unique_classes, counts = torch.unique(mask, return_counts=True)
         for cls, count in zip(unique_classes.tolist(), counts.tolist()):
             class_counts[cls] += count
@@ -50,7 +50,8 @@ class ExperimentBuilder(nn.Module):
         weight_decay_coefficient,
         use_gpu,
         continue_from_epoch=-1, 
-        lr=1e-3
+        lr=1e-3,
+        model_name = "TestModel"
     ):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
@@ -65,11 +66,14 @@ class ExperimentBuilder(nn.Module):
         :param weight_decay_coefficient: A float indicating the weight decay to use with the adam optimizer.
         :param use_gpu: A boolean indicating whether to use a GPU or not.
         :param continue_from_epoch: An int indicating whether we'll start from scrach (-1) or whether we'll reload a previously saved model of epoch 'continue_from_epoch' and continue training from there.
+        :param lr: A float indicating the learning rate to use with the adam optimizer.
+        :param model_name: A string indicating the name of the model to be used. Used to change the training loop for different models.
         """
         super(ExperimentBuilder, self).__init__()
 
         self.experiment_name = experiment_name
         self.model = network_model
+        self.model_name = model_name
 
         if torch.cuda.device_count() >= 1 and use_gpu:
             self.device = torch.device("cuda")
@@ -210,8 +214,6 @@ class ExperimentBuilder(nn.Module):
         Complete the code in the block below to collect absolute mean of the gradients for each layer in all_grads with the             
         layer names in layers.
         """
-        ########################################
-        # TODO write your code here
         for name, param in named_parameters:
             if param.requires_grad and param.grad is not None and "bias" not in name:
                 # Compute the absolute mean of the gradient
@@ -224,8 +226,6 @@ class ExperimentBuilder(nn.Module):
                 )
                 layers.append(modified_name)
         epoch = self.current_epoch
-        ########################################
-
         plt = self.plot_func_def(all_grads, layers,epoch)
 
         return plt
@@ -248,11 +248,11 @@ class ExperimentBuilder(nn.Module):
 
         return iou
 
-    def run_train_iter(self, x, y):
+    def run_train_iter(self, x, y, prompt):
 
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
-        x, y = x.to(device=self.device), y.to(device=self.device)  # send data to device as torch tensors
-        out = self.model(x)  # forward the data in the model
+        x, y, prompt = x.to(device=self.device), y.to(device=self.device), prompt.to(device=self.device)   # send data to device as torch tensors
+        out = self.model(x, prompt) if self.model_name == "PromptUNet" else self.model(x) # forward the data in the model
 
         loss = self.loss_criterion(out, y)  # compute loss
 
@@ -267,12 +267,11 @@ class ExperimentBuilder(nn.Module):
 
         return loss.item(), iou
 
-    def run_evaluation_iter(self, x, y):
-
+    def run_evaluation_iter(self, x, y, prompt):
 
         self.eval()  # sets the system to validation mode
-        x, y = x.to(device=self.device), y.to(device=self.device)  # convert data to pytorch tensors and send to the computation device
-        out = self.model(x)  # forward the data in the model
+        x, y, prompt = x.to(device=self.device), y.to(device=self.device), prompt.to(device=self.device)   # send data to device as torch tensors
+        out = self.model(x, prompt) if self.model_name == "PromptUNet" else self.model(x) # forward the data in the model
 
         loss = self.loss_criterion(out, y)  # compute loss
 
@@ -355,9 +354,9 @@ class ExperimentBuilder(nn.Module):
             with tqdm.tqdm(
                 total=len(self.train_data)
             ) as pbar_train:  # create a progress bar for training
-                for idx, (images, masks) in enumerate(self.train_data):  # get data batches
+                for idx, (images, masks, prompt) in enumerate(self.train_data):  # get data batches
                     loss, iou = self.run_train_iter(
-                        x=images, y=masks
+                        x=images, y=masks, prompt=prompt
                     )  # take a training iter step
                     current_epoch_losses["train_loss"].append(
                         loss
@@ -373,9 +372,9 @@ class ExperimentBuilder(nn.Module):
             with tqdm.tqdm(
                 total=len(self.val_data)
             ) as pbar_val:  # create a progress bar for validation
-                for x, y in self.val_data:  # get data batches
+                for x, y, prompt  in self.val_data:  # get data batches
                     loss, iou = self.run_evaluation_iter(
-                        x=x, y=y
+                        x=x, y=y, prompt=prompt
                     )  # run a validation iter
                     current_epoch_losses["val_loss"].append(
                         loss
@@ -503,9 +502,9 @@ class ExperimentBuilder(nn.Module):
             "test_loss": [],
         }  # initialize a statistics dict
         with tqdm.tqdm(total=len(self.test_data)) as pbar_test:  # ini a progress bar
-            for x, y in self.test_data:  # sample batch
+            for x, y, prompt in self.test_data:  # sample batch
                 loss, iou = self.run_evaluation_iter(
-                    x=x, y=y
+                    x=x, y=y, prompt=prompt
                 )  # compute loss and iou by running an evaluation step
                 current_epoch_losses["test_loss"].append(loss)  # save test loss
                 current_epoch_losses["test_iou"].append(iou)  # save test iou

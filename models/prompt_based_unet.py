@@ -23,7 +23,7 @@ class CLIPResNetFeatureExtractor(nn.Module):
 
 
 
-class CLIPResnetSegmentationModel(nn.Module):
+class PromptUNet(nn.Module):
     def __init__(self, device, n_classes):
         super().__init__()
 
