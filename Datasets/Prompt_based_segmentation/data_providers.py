@@ -69,7 +69,7 @@ transform = A.Compose(
         # A.RandomGamma(p=0.5), # Randomly change image gamma
         # A.Blur(p=0.5), # Randomly blur image
         # A.GaussNoise(p=0.5), # Randomly add gaussian noise
-        #A.HorizontalFlip(p=0.5),
+        A.HorizontalFlip(p=0.5),
         ToTensorV2(),
     ]
 )
