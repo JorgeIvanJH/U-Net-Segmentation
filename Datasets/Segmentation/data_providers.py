@@ -47,10 +47,10 @@ transform = A.Compose(
         A.RandomCrop(width=IMG_SIZE, height=IMG_SIZE, p=1.0), # Randomly crop image
         # A.Rotate(limit=35, p=1.0), # Rotate image
         # A.HorizontalFlip(p=0.5), # Flip image horizontally
-        A.RGBShift(
-            r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.5
-        ),  # Shift RGB colors
-        A.RandomBrightnessContrast(p=0.5),  # Randomly change brightness and contrast
+        # A.RGBShift(
+        #     r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.5
+        # ),  # Shift RGB colors
+        # A.RandomBrightnessContrast(p=0.5),  # Randomly change brightness and contrast
         # A.RandomGamma(p=0.5), # Randomly change image gamma
         # A.Blur(p=0.5), # Randomly blur image
         # A.GaussNoise(p=0.5), # Randomly add gaussian noise

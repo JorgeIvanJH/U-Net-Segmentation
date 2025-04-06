@@ -7,6 +7,16 @@ from tqdm import tqdm
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import cv2
+from albumentations.pytorch import ToTensorV2
+import albumentations as A
+import cv2
+import numpy as np
+import pandas as pd
+import os
+from config import SEED, TRAIN_SIZE, IMG_SIZE
+import csv
+
 
 # Matplotlib for static visualizations
 import matplotlib.pyplot as plt
@@ -54,7 +64,92 @@ def visualize(image, mask=None, masktitle='Mask'):
 
         plt.show()
 
+def training_plot(training_summary_route):
+    df = pd.read_csv(training_summary_route)
 
+    best_epoch = df[df.val_iou == df.val_iou.max()]
+    print("Best epoch:\n", best_epoch)
+
+    fig, ax1 = plt.subplots(figsize=(14, 6))  # Wider figure
+
+    # IoU plots
+    ax1.plot(df.index, df['train_iou'], label='Train IoU', marker='o', color='blue')
+    ax1.plot(df.index, df['val_iou'], label='Validation IoU', marker='o', color='orange')
+    ax1.axvline(x=best_epoch.index[0], color='red', linestyle='--', label='Best Epoch')
+    ax1.axhline(y=best_epoch.val_iou.values[0], color='green', linestyle='--', label='Best Val IoU')
+    ax1.set_xlabel('Epochs')
+    ax1.set_ylabel('IoU', color='blue')
+    ax1.tick_params(axis='y', labelcolor='blue')
+    ax1.grid(True)
+
+    # Loss plots
+    ax2 = ax1.twinx()
+    ax2.plot(df.index, df['train_loss'], label='Train Loss', marker='o', color='purple')
+    ax2.plot(df.index, df['val_loss'], label='Validation Loss', marker='o', color='brown')
+    ax2.axhline(y=best_epoch.val_loss.values[0], color='green', linestyle='--', label='Best Val Loss')
+    ax2.set_ylabel('Loss', color='purple')
+    ax2.tick_params(axis='y', labelcolor='purple')
+
+    # Combine legends and place outside right
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2,
+               loc='upper left', bbox_to_anchor=(1.05, 0.5))  # Shift legend further right
+
+    plt.title('Training and Validation IoU and Loss')
+    plt.subplots_adjust(right=0.8)  # Give more room on the right
+    plt.show()
+
+def rgb_to_class(mask):
+    """Convert an RGB mask to a single-channel class index mask."""
+    h, w, _ = mask.shape
+    class_mask = np.zeros((h, w), dtype=np.uint8)
+
+    color_map = {
+            (128, 0, 0): 1,  # Cat
+            (0, 128, 0): 2,  # Dog
+            (0, 0, 0): 0,  # Background
+            (255, 255, 255): 3,  # Border
+        }
+
+    # Iterate over color map and assign class values
+    for rgb, class_idx in color_map.items():
+        mask_match = np.all(mask == np.array(rgb, dtype=np.uint8), axis=-1)
+        class_mask[mask_match] = class_idx
+    return class_mask
+
+def get_test_sample(image_path, mask_path):
+    image_path = os.path.join(os.getcwd(), image_path)
+    mask_path = os.path.join(os.getcwd(), mask_path)
+
+    transform = A.Compose(
+        [
+            A.Resize(IMG_SIZE, IMG_SIZE),  
+            ToTensorV2(),
+        ]
+    )
+    image = cv2.imread(image_path, cv2.IMREAD_COLOR)  # Image
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    mask = cv2.imread(mask_path, cv2.IMREAD_UNCHANGED)
+    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
+
+    mask = rgb_to_class(mask)
+    transformed = transform(image=image, mask=mask)
+    image, mask = transformed["image"], transformed["mask"]
+    mask = mask.clone().detach().long()
+    image = image / 255.0
+    return image, mask
+
+def evaluate_model_on_sample(nn_model, image, mask, show = False):
+    nn_model.eval()
+    with torch.no_grad():
+        logits = nn_model(image.unsqueeze(0).to("cpu"))
+        predicted_classes = torch.argmax(logits, dim=1)
+        segmentation_mask = predicted_classes[0].cpu().numpy()
+    if show:
+        visualize(image.permute(1, 2, 0).cpu().numpy(), mask)
+        visualize(image.permute(1, 2, 0).cpu().numpy(), segmentation_mask, "Predicted Mask")
+    return segmentation_mask
 
 def intersecton_over_union(preds, labels, num_classes, ignore_border=False, border_idx=3):
     
@@ -77,28 +172,98 @@ def intersecton_over_union(preds, labels, num_classes, ignore_border=False, bord
             ious.append(intersection / union)
     return ious
 
-def evluate_model(nn_model, test_dataloader, device, ignore_border=False, limit_samples=False):
+def dice_coefficient(pred, target, num_classes, epsilon=1e-6):
+    dice = []
+    for c in range(num_classes):
+        pred_c = (pred == c).float()
+        target_c = (target == c).float()
+
+        intersection = torch.sum(pred_c * target_c)
+        union = torch.sum(pred_c) + torch.sum(target_c)
+        d = (2. * intersection + epsilon) / (union + epsilon)
+        dice.append(d.item())
+    return dice
+
+def pixel_accuracy(pred, target):
+    correct = (pred == target).float()
+    acc = correct.sum() / correct.numel()
+    return acc.item()
+
+def evaluate_model(nn_model, test_dataloader, device, ignore_border=False, limit_samples=False):
     """
-    Evaluate the model on the test dataset and calculate the mean IoU for each class.
+    Evaluate the model on the test dataset and calculate mean IoU, Dice, and Pixel Accuracy.
     """
     iou_list = []
-    for i,(image, mask, _) in enumerate(tqdm(test_dataloader)):
+    dice_list = []
+    pixel_acc_list = []
+
+    for i, (image, mask, _) in enumerate(tqdm(test_dataloader)):
         image = image.to(device)
         mask = mask.to(device)
 
         nn_model.eval()
         with torch.no_grad():
-            logits = nn_model(image)  # Output shape: (B, n_classes, H, W)
+            logits = nn_model(image)  # Shape: (B, C, H, W)
             predicted_classes = torch.argmax(logits, dim=1)  # Shape: (B, H, W)
 
         iou = intersecton_over_union(predicted_classes, mask, num_classes=4, ignore_border=ignore_border)
+        dice = dice_coefficient(predicted_classes, mask, num_classes=4)
+        acc = pixel_accuracy(predicted_classes, mask)
+
         iou_list.append(iou)
+        dice_list.append(dice)
+        pixel_acc_list.append(acc)
+
         if limit_samples and i > 10:
             break
 
-    mean_per_class, std_per_class = np.nanmean(iou_list,axis=0), np.nanstd(iou_list,axis=0)
-    mean_total, std_total = np.nanmean(iou_list), np.nanstd(iou_list)
+    # Convert to numpy for stats
+    iou_array = np.array(iou_list)
+    dice_array = np.array(dice_list)
 
-    for i, (mean, std) in enumerate(zip(mean_per_class, std_per_class)):
-        print(f"{map_class[i]}: {mean:.4f} ± {std:.4f}")
-    print(f"TOTAL Mean IoU: {mean_total:.4f} ± {std_total:.4f}")
+    mean_iou_per_class = np.nanmean(iou_array, axis=0)
+    std_iou_per_class = np.nanstd(iou_array, axis=0)
+    mean_iou_total = np.nanmean(iou_array)
+    std_iou_total = np.nanstd(iou_array)
+
+    mean_dice_per_class = np.nanmean(dice_array, axis=0)
+    mean_dice_total = np.nanmean(dice_array)
+    mean_pixel_acc = np.mean(pixel_acc_list)
+
+    for i, (iou_m, iou_s, dice_m) in enumerate(zip(mean_iou_per_class, std_iou_per_class, mean_dice_per_class)):
+        print(f"{map_class[i]} - IoU: {iou_m:.4f} ± {iou_s:.4f}, Dice: {dice_m:.4f}")
+    
+    print(f"TOTAL Mean IoU: {mean_iou_total:.4f} ± {std_iou_total:.4f}")
+    print(f"TOTAL Mean Dice: {mean_dice_total:.4f}")
+    print(f"TOTAL Pixel Accuracy: {mean_pixel_acc:.4f}")
+
+
+def save_statistics(experiment_log_dir, filename, stats_dict, current_epoch, continue_from_mode=False, save_full_dict=False):
+    """
+    Saves the statistics in stats dict into a csv file. Using the keys as the header entries and the values as the
+    columns of a particular header entry
+    :param experiment_log_dir: the log folder dir filepath
+    :param filename: the name of the csv file
+    :param stats_dict: the stats dict containing the data to be saved
+    :param current_epoch: the number of epochs since commencement of the current training session (i.e. if the experiment continued from 100 and this is epoch 105, then pass relative distance of 5.)
+    :param save_full_dict: whether to save the full dict as is overriding any previous entries (might be useful if we want to overwrite a file)
+    :return: The filepath to the summary file
+    """
+    summary_filename = os.path.join(experiment_log_dir, filename)
+    mode = 'a' if continue_from_mode else 'w'
+    with open(summary_filename, mode) as f:
+        writer = csv.writer(f)
+        if not continue_from_mode:
+            writer.writerow(list(stats_dict.keys()))
+
+        if save_full_dict:
+            total_rows = len(list(stats_dict.values())[0])
+            for idx in range(total_rows):
+                row_to_add = [value[idx] for value in list(stats_dict.values())]
+                writer.writerow(row_to_add)
+        else:
+            row_to_add = [value[current_epoch] for value in list(stats_dict.values())]
+            writer.writerow(row_to_add)
+
+    return summary_filename
+
