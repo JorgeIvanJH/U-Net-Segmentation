@@ -29,16 +29,43 @@ map_class[3] = "Border"
 
 
 
-def analyze(image, mask=None):
-    """with plotly for detailed analysis"""
-    if mask is None:
-        fig = px.imshow(image)
-        fig.show()
-    fig = make_subplots(
-    rows=1, cols=2)
-    fig.add_trace(go.Image(z=image), 1, 1)
-    fig.add_trace(go.Image(z=mask), 1, 2)
+def analyze(image, mask, ismask=True):
+    """Detailed analysis with plotly (mimicking matplotlib style)"""
+    if not ismask:
+        # If no mask, simply show the image
+        fig = make_subplots(rows=1, cols=2)
+        fig.add_trace(go.Image(z=image), row=1, col=1)
+        fig.update_layout(
+            title_text="Image",
+            title_x=0.5
+        )
+        fig.add_trace(go.Image(z=mask), row=1, col=2)
+        fig.update_layout(
+            title_text="Mask",
+            title_x=0.5
+        )
+    else:
+        # Create subplot with two images (image and mask)
+        fig = make_subplots(rows=1, cols=2)
+
+        # Add the image on the first subplot
+        fig.add_trace(go.Image(z=image), row=1, col=1)
+        fig.update_layout(
+            title_text="Image",
+            title_x=0.5
+        )
+
+        # Add the mask on the second subplot with colorbar and title
+        fig.add_trace(go.Heatmap(z=mask[::-1], colorscale='Viridis', coloraxis="coloraxis"), row=1, col=2)
+        fig.update_layout(
+            title_text="Mask",
+            title_x=0.5,
+            coloraxis=dict(colorbar=dict(title="Mask Intensity"))
+        )
+        fig.update_yaxes(scaleanchor="y", row=1, col=2)  # This ensures the axes are consistent
+
     fig.show()
+
 
 def visualize(image, mask=None, masktitle='Mask'):
     plt.figure(figsize=(10, 5))
@@ -54,13 +81,14 @@ def visualize(image, mask=None, masktitle='Mask'):
         plt.axis('off')
 
         plt.subplot(1, 2, 2)
-        im = plt.imshow(mask, cmap='jet', vmin=0, vmax=3)  # Set fixed colorbar range
+        im = plt.imshow(mask, cmap='inferno', vmin=0, vmax=3)
         plt.title(masktitle)
         plt.axis('off')
 
         # Add colorbar (acts as legend)
-        cbar = plt.colorbar(im, fraction=0.046, pad=0.04)
-        cbar.set_label('Mask Intensity')
+        cbar = plt.colorbar(im, fraction=0.046, pad=0.04, ticks=[0, 1, 2, 3])
+        cbar.set_ticklabels(['0: background', '1: cat', '2: dog', '3: border'])
+        cbar.set_label('Mask Class')
 
         plt.show()
 
@@ -267,3 +295,13 @@ def save_statistics(experiment_log_dir, filename, stats_dict, current_epoch, con
 
     return summary_filename
 
+def save_statistics(log_dir, log_csv_name, stats_dict):
+    
+    os.makedirs(log_dir, exist_ok=True)
+    csv_file_path = os.path.join(log_dir, log_csv_name)
+    file_exists = os.path.isfile(csv_file_path)
+    with open(csv_file_path, mode='a', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=stats_dict.keys())
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(stats_dict)
