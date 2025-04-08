@@ -56,7 +56,8 @@ transform = A.Compose(
         A.GaussNoise(p=0.5), # Randomly add gaussian noise
         A.HorizontalFlip(p=0.5),
         ToTensorV2(),
-    ]
+    ],
+    random_state=SEED
 )
 
 adjust = A.Compose(
