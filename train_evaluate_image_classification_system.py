@@ -7,6 +7,8 @@ from Datasets.Segmentation.data_providers import test_dataset,val_dataset,train_
 from arg_extractor import get_args, available_models
 from experiment_builder import ExperimentBuilder
 
+from config import AUTOENCODER_WEIGHT_DIR
+
 args = get_args()  # get arguments from command line
 rng = np.random.RandomState(seed=args.seed)  # set the seeds for the experiment
 torch.manual_seed(seed=args.seed)  # sets pytorch's seed
@@ -33,7 +35,7 @@ elif args.model_name == 'UNet':
     
     if args.load_encoder_weights:
         print("Loading pretrained Autoencoder weights")
-        path_to_weights = "models/weights/autoencoder/autoencoder_weights_0.002858656363969203.pth"
+        path_to_weights = AUTOENCODER_WEIGHT_DIR
         print(f"Loading pretrained Autoencoder weights from {path_to_weights}")
         autoencoder_weights = torch.load(path_to_weights, map_location=torch.device('cpu'))
         from models.unet_model import Autoencoder

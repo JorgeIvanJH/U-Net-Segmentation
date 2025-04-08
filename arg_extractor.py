@@ -64,14 +64,17 @@ def get_args():
 
 # TestModel (BASE)
 # python train_evaluate_image_classification_system.py --model_name TestModel --experiment_name simple_experiment --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --use_gpu False --continue_from_epoch -2
-# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_experiment --num_epochs 5 --num_workers 0 --batch_size 4 --num_filters 16 --num_classes 4 --use_gpu False --continue_from_epoch -2
-# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name simple_nf64_experiment --num_epochs 20 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -2
+
+
+# UNET (BASE)
+# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name BASE_v2_experiment --load_encoder_weights False --num_epochs 50 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -1
 
 # UNET (AUTOENCODER ENCODER)
-# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name unet_w_autoencoder_experiment --load_encoder_weights True --num_epochs 40 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -2
-
+# python train_evaluate_image_classification_system.py --model_name UNet --experiment_name AUTOENCODER_v2_experiment --load_encoder_weights True --num_epochs 50 --num_workers 0 --batch_size 4 --num_filters 64 --num_classes 4 --use_gpu False --continue_from_epoch -1
 
 # UNET (CLIP ENCODER)
-#  python train_evaluate_image_classification_system.py --model_name CLIP --experiment_name CLIP_experiment --num_epochs 40 --num_workers 0 --batch_size 4 --num_classes 4 --use_gpu False --continue_from_epoch -2
+#  python train_evaluate_image_classification_system.py --model_name CLIP --experiment_name CLIP_v2_experiment --load_encoder_weights False  --num_epochs 50 --num_workers 0 --batch_size 4 --num_filters 64  --num_classes 4 --use_gpu False --continue_from_epoch -1
+
+
 # PROMPT UNET (CLIP ENCODER)
-# python train_evaluate_image_classification_system.py --model_name PromptUNet --experiment_name PromptUNet_experiment --num_epochs 40 --num_workers 0 --batch_size 4 --num_classes 4 --use_gpu False --continue_from_epoch -2
+# python train_evaluate_image_classification_system.py --model_name PromptUNet --experiment_name PromptUNet_experiment --num_epochs 40 --num_workers 0 --batch_size 4 --num_classes 2 --use_gpu False --continue_from_epoch -2

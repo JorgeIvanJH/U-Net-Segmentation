@@ -45,16 +45,24 @@ transform = A.Compose(
     [
         A.Resize(int(IMG_SIZE*1.1), int(IMG_SIZE*1.1)),  
         A.RandomCrop(width=IMG_SIZE, height=IMG_SIZE, p=1.0), # Randomly crop image
-        # A.Rotate(limit=35, p=1.0), # Rotate image
-        # A.HorizontalFlip(p=0.5), # Flip image horizontally
-        # A.RGBShift(
-        #     r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.5
-        # ),  # Shift RGB colors
-        # A.RandomBrightnessContrast(p=0.5),  # Randomly change brightness and contrast
-        # A.RandomGamma(p=0.5), # Randomly change image gamma
-        # A.Blur(p=0.5), # Randomly blur image
-        # A.GaussNoise(p=0.5), # Randomly add gaussian noise
+        A.Rotate(limit=35, p=1.0), # Rotate image
+        A.HorizontalFlip(p=0.5), # Flip image horizontally
+        A.RGBShift(
+            r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.5
+        ),  # Shift RGB colors
+        A.RandomBrightnessContrast(p=0.5),  # Randomly change brightness and contrast
+        A.RandomGamma(p=0.5), # Randomly change image gamma
+        A.Blur(p=0.5), # Randomly blur image
+        A.GaussNoise(p=0.5), # Randomly add gaussian noise
         A.HorizontalFlip(p=0.5),
+        ToTensorV2(),
+    ],
+    random_state=SEED
+)
+
+adjust = A.Compose(
+    [
+        A.Resize(int(IMG_SIZE), int(IMG_SIZE)),  
         ToTensorV2(),
     ]
 )
@@ -63,7 +71,7 @@ transform = A.Compose(
 class SegmentationDataset(Dataset):
     def __init__(self, dataframe, transform=None):
         self.dataframe = dataframe
-        self.transform = transform
+        self.transform = transform if transform else adjust
         self.color_map = {
             (128, 0, 0): 1,  # Cat
             (0, 128, 0): 2,  # Dog
@@ -106,5 +114,5 @@ class SegmentationDataset(Dataset):
         return image, mask, image*0 # image*0 is a placeholder for the heatmap in the data providers for prompt based unet
 
 train_dataset = SegmentationDataset(train_paths_df, transform=transform)
-val_dataset = SegmentationDataset(val_paths_df, transform=transform)
-test_dataset = SegmentationDataset(test_paths_df, transform=transform)
+val_dataset = SegmentationDataset(val_paths_df, transform=None)
+test_dataset = SegmentationDataset(test_paths_df, transform=None)

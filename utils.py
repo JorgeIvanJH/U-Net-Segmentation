@@ -29,16 +29,43 @@ map_class[3] = "Border"
 
 
 
-def analyze(image, mask=None):
-    """with plotly for detailed analysis"""
-    if mask is None:
-        fig = px.imshow(image)
-        fig.show()
-    fig = make_subplots(
-    rows=1, cols=2)
-    fig.add_trace(go.Image(z=image), 1, 1)
-    fig.add_trace(go.Image(z=mask), 1, 2)
+def analyze(image, mask, ismask=True):
+    """Detailed analysis with plotly (mimicking matplotlib style)"""
+    if not ismask:
+        # If no mask, simply show the image
+        fig = make_subplots(rows=1, cols=2)
+        fig.add_trace(go.Image(z=image), row=1, col=1)
+        fig.update_layout(
+            title_text="Image",
+            title_x=0.5
+        )
+        fig.add_trace(go.Image(z=mask), row=1, col=2)
+        fig.update_layout(
+            title_text="Mask",
+            title_x=0.5
+        )
+    else:
+        # Create subplot with two images (image and mask)
+        fig = make_subplots(rows=1, cols=2)
+
+        # Add the image on the first subplot
+        fig.add_trace(go.Image(z=image), row=1, col=1)
+        fig.update_layout(
+            title_text="Image",
+            title_x=0.5
+        )
+
+        # Add the mask on the second subplot with colorbar and title
+        fig.add_trace(go.Heatmap(z=mask[::-1], colorscale='Viridis', coloraxis="coloraxis"), row=1, col=2)
+        fig.update_layout(
+            title_text="Mask",
+            title_x=0.5,
+            coloraxis=dict(colorbar=dict(title="Mask Intensity"))
+        )
+        fig.update_yaxes(scaleanchor="y", row=1, col=2)  # This ensures the axes are consistent
+
     fig.show()
+
 
 def visualize(image, mask=None, masktitle='Mask'):
     plt.figure(figsize=(10, 5))
@@ -54,13 +81,14 @@ def visualize(image, mask=None, masktitle='Mask'):
         plt.axis('off')
 
         plt.subplot(1, 2, 2)
-        im = plt.imshow(mask, cmap='jet', vmin=0, vmax=3)  # Set fixed colorbar range
+        im = plt.imshow(mask, cmap='inferno', vmin=0, vmax=3)
         plt.title(masktitle)
         plt.axis('off')
 
         # Add colorbar (acts as legend)
-        cbar = plt.colorbar(im, fraction=0.046, pad=0.04)
-        cbar.set_label('Mask Intensity')
+        cbar = plt.colorbar(im, fraction=0.046, pad=0.04, ticks=[0, 1, 2, 3])
+        cbar.set_ticklabels(['0: background', '1: cat', '2: dog', '3: border'])
+        cbar.set_label('Mask Class')
 
         plt.show()
 
@@ -236,6 +264,7 @@ def evaluate_model(nn_model, test_dataloader, device, ignore_border=False, limit
     print(f"TOTAL Mean IoU: {mean_iou_total:.4f} ± {std_iou_total:.4f}")
     print(f"TOTAL Mean Dice: {mean_dice_total:.4f}")
     print(f"TOTAL Pixel Accuracy: {mean_pixel_acc:.4f}")
+    return mean_iou_total, mean_dice_total, mean_pixel_acc
 
 
 def save_statistics(experiment_log_dir, filename, stats_dict, current_epoch, continue_from_mode=False, save_full_dict=False):
@@ -267,3 +296,119 @@ def save_statistics(experiment_log_dir, filename, stats_dict, current_epoch, con
 
     return summary_filename
 
+def save_statistics(log_dir, log_csv_name, stats_dict):
+    
+    os.makedirs(log_dir, exist_ok=True)
+    csv_file_path = os.path.join(log_dir, log_csv_name)
+    file_exists = os.path.isfile(csv_file_path)
+    with open(csv_file_path, mode='a', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=stats_dict.keys())
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(stats_dict)
+
+def evaluate_model_dice(nn_model, test_dataloader, device, limit_samples=False, noise_function = None):
+    """
+    Evaluate the model on the test dataset and calculate mean IoU, Dice, and Pixel Accuracy.
+    """
+    def dice_coefficient(pred, target, num_classes, epsilon=1e-6):
+        dice = []
+        for c in range(num_classes):
+            pred_c = (pred == c).float()
+            target_c = (target == c).float()
+
+            intersection = torch.sum(pred_c * target_c)
+            union = torch.sum(pred_c) + torch.sum(target_c)
+            d = (2. * intersection + epsilon) / (union + epsilon)
+            dice.append(d.item())
+        return dice
+    
+    dice_list = []
+
+    for i, (image, mask, _) in enumerate(tqdm(test_dataloader)):
+        image = image.to(device)
+        mask = mask.to(device)
+
+        nn_model.eval()
+        with torch.no_grad():
+            image = image if noise_function is None else noise_function(image)
+            logits = nn_model(image)  # Shape: (B, C, H, W)
+            predicted_classes = torch.argmax(logits, dim=1)  # Shape: (B, H, W)
+
+        dice = dice_coefficient(predicted_classes, mask, num_classes=4)
+
+        dice_list.append(dice)
+
+        if limit_samples and i > 10:
+            break
+
+    # Convert to numpy for stats
+    dice_array = np.array(dice_list)
+
+    mean_dice_per_class = np.nanmean(dice_array, axis=0)
+    mean_dice_total = np.nanmean(dice_array)
+
+    results = {}
+    for i, dice_m in enumerate(mean_dice_per_class):
+        results[map_class[i]] = dice_m
+    results["TOTAL"] = mean_dice_total
+    return results
+
+def visualize_noise_effect(model,image_cat_easy_back, mask_cat_easy_back,image_dog_easy_back, mask_dog_easy_back,noise_function,conds_of_noise):
+    pred_masks_dogs = []
+    pred_masks_cats = []
+    dice_acc_cats = []
+    dice_acc_dogs = []
+    for cond in conds_of_noise:
+        for image, mask, clss in zip([image_cat_easy_back,image_dog_easy_back], [mask_cat_easy_back, mask_dog_easy_back], ["c","d"]):
+            image_w_noise = noise_function(image, cond)
+            pred_mask = evaluate_model_on_sample(model, image_w_noise, mask)
+            pred_masks_cats.append(pred_mask) if clss == "c" else pred_masks_dogs.append(pred_mask)
+            dice = np.sum((pred_mask == mask.numpy()) & (mask.numpy() > 0)) / np.sum(mask.numpy() > 0)
+            dice_acc_cats.append(dice) if clss == "c" else dice_acc_dogs.append(dice)
+
+
+
+    # Plot the images with noise and their corresponding predicted masks for cats and dogs separately
+    fig, axes = plt.subplots(2, len(conds_of_noise), figsize=(5 * len(conds_of_noise), 10))
+
+    # Plot for cats
+    for i, (cond, noisy_image, pred_mask, dice) in enumerate(zip(conds_of_noise, 
+                                                                    [noise_function(image_cat_easy_back, cond) for cond in conds_of_noise], 
+                                                                    pred_masks_cats, 
+                                                                    dice_acc_cats)):
+        # Plot noisy image
+        axes[0, i].imshow(noisy_image.permute(1, 2, 0).numpy())
+        axes[0, i].set_title(f"Cat - Noisy Image\n(cond={cond})", fontsize=25)
+        axes[0, i].axis("off")
+
+        # Plot predicted mask
+        axes[1, i].imshow(pred_mask, cmap='inferno')
+        axes[1, i].set_title(f"Cat - Predicted Mask\n(cond={cond}, Dice={dice:.2f})", fontsize=25)
+        axes[1, i].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+    fig, axes = plt.subplots(2, len(conds_of_noise), figsize=(5 * len(conds_of_noise), 10))
+
+    # Plot for dogs
+    for i, (cond, noisy_image, pred_mask, dice) in enumerate(zip(conds_of_noise, 
+                                                                    [noise_function(image_dog_easy_back, cond) for cond in conds_of_noise], 
+                                                                    pred_masks_dogs, 
+                                                                    dice_acc_dogs)):
+        # Plot noisy image
+        axes[0, i].imshow(noisy_image.permute(1, 2, 0).numpy())
+        axes[0, i].set_title(f"Dog - Noisy Image\n(cond={cond})", fontsize=25)
+        axes[0, i].axis("off")
+
+        # Plot predicted mask
+        axes[1, i].imshow(pred_mask, cmap='inferno')
+        axes[1, i].set_title(f"Dog - Predicted Mask\n(cond={cond}, Dice={dice:.2f})", fontsize=25)
+        axes[1, i].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+    plt.tight_layout()
+    plt.show()

@@ -109,6 +109,9 @@ class ExperimentBuilder(nn.Module):
 
         # Loss function
         class_weights = compute_class_weights(self.val_data, network_model.n_classes) # Classes weighted by their frequency in the dataset
+        class_weights = class_weights**2 # Exponential weight to each class
+        class_weights[3] = 0 # NO WEIGHT TO THE BORDER CLASS
+        print("Class weights: ", class_weights)
         if use_gpu:
             class_weights = class_weights.to(self.device)
         self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights).to(
