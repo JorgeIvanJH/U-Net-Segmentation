@@ -8,6 +8,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import os
 from config import SEED, TRAIN_SIZE, IMG_SIZE
+import random
+random.seed(SEED)
+np.random.seed(SEED)
 
 
 PATH_TRAINVAL = 'Datasets/Segmentation/TrainVal'
@@ -56,8 +59,7 @@ transform = A.Compose(
         A.GaussNoise(p=0.5), # Randomly add gaussian noise
         A.HorizontalFlip(p=0.5),
         ToTensorV2(),
-    ],
-    random_state=SEED
+    ]
 )
 
 adjust = A.Compose(
