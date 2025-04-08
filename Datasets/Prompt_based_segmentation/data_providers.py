@@ -180,12 +180,13 @@ class SegmentationDataset(Dataset):
         heatmap = generate_heatmap(point, mask)
         mask = (mask == elem_to_point).astype(np.uint8)
 
-        image = totensor(image=image)["image"]
-        mask = totensor(image=mask)["image"]
-        heatmap = totensor(image=heatmap)["image"]
+        image = totensor(image=image)["image"].float()
+        mask = totensor(image=mask)["image"].squeeze(0).long()
+        heatmap = totensor(image=heatmap)["image"].float()
 
         mask = mask.clone().detach().long()
         image = image / 255.0 
+        
         return image, mask, heatmap # image*0 is a placeholder for the heatmap in the data providers for prompt based unet
 
 train_dataset = SegmentationDataset(train_paths_df, transform=transform)

@@ -108,15 +108,17 @@ class ExperimentBuilder(nn.Module):
         )
 
         # Loss function
-        class_weights = compute_class_weights(self.val_data, network_model.n_classes) # Classes weighted by their frequency in the dataset
-        class_weights = class_weights**2 # Exponential weight to each class
-        class_weights[3] = 0 # NO WEIGHT TO THE BORDER CLASS
-        print("Class weights: ", class_weights)
-        if use_gpu:
-            class_weights = class_weights.to(self.device)
-        self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights).to(
-            self.device
-        )  # send the loss computation to the GPU 
+        if self.model_name == "PromptUNet":
+            print("No weight to classes in PromptUNet")
+            self.loss_criterion = nn.CrossEntropyLoss().to(self.device) 
+        else:
+            class_weights = compute_class_weights(self.val_data, network_model.n_classes) # Classes weighted by their frequency in the dataset
+            print("Class weights: ", class_weights)
+            if use_gpu:
+                class_weights = class_weights.to(self.device)
+            self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights).to(
+                self.device
+            ) 
 
         # Generate the directory names
         self.experiment_folder = os.path.abspath(experiment_name)
@@ -256,7 +258,9 @@ class ExperimentBuilder(nn.Module):
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
         x, y, prompt = x.to(device=self.device), y.to(device=self.device), prompt.to(device=self.device)   # send data to device as torch tensors
         out = self.model(x, prompt) if self.model_name == "PromptUNet" else self.model(x) # forward the data in the model
-
+        print("")
+        print("out shape: ", out.shape, type(out), out[0,0,:10,:10])
+        print("y shape: ", y.shape)#, type(y), y[0,0,:10,:10])
         loss = self.loss_criterion(out, y)  # compute loss
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
