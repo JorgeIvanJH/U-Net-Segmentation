@@ -164,11 +164,10 @@ class SegmentationDataset(Dataset):
                 weights = [0.1,0.2]
             else: # Cat is present
                 weights = [0.1, 0.5] 
+            elem_to_point = random.choices(elems_in_mask, weights=weights, k=1)[0]
         else: # Both Cat and Dog are present
-            weights = [0.1, 0.5, 0.3]
+            elem_to_point = random.choice(elems_in_mask)
 
-        elem_to_point = random.choices(elems_in_mask, weights=weights, k=1)[0]
-  
         if self.transform:
             transformed = self.transform(image=image, mask=mask)
             image, mask = transformed["image"], transformed["mask"]

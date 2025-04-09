@@ -258,9 +258,9 @@ class ExperimentBuilder(nn.Module):
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
         x, y, prompt = x.to(device=self.device), y.to(device=self.device), prompt.to(device=self.device)   # send data to device as torch tensors
         out = self.model(x, prompt) if self.model_name == "PromptUNet" else self.model(x) # forward the data in the model
-        print("")
-        print("out shape: ", out.shape, type(out), out[0,0,:10,:10])
-        print("y shape: ", y.shape)#, type(y), y[0,0,:10,:10])
+
+
+        
         loss = self.loss_criterion(out, y)  # compute loss
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
