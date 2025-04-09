@@ -37,8 +37,8 @@ elif args.model_name == 'UNet':
         print("Loading pretrained Autoencoder weights")
         path_to_weights = AUTOENCODER_WEIGHT_DIR
         print(f"Loading pretrained Autoencoder weights from {path_to_weights}")
-        autoencoder_weights = torch.load(path_to_weights, map_location=torch.device('cpu'))
-        from models.unet_model import Autoencoder
+        autoencoder_weights = torch.load(path_to_weights, map_location = torch.device("mps"))
+        from models.autoencoder import Autoencoder
         autoencoder = Autoencoder(input_channels=3, n_filters=64)
         autoencoder.load_state_dict(autoencoder_weights, strict=True)
         print("Moving encoder weights from Autoencoder to UNet")
@@ -59,13 +59,13 @@ elif args.model_name == 'UNet':
 
 elif args.model_name == 'CLIP':
     from models.clip_based_unet import CLIPResnetSegmentationModel
-    device = torch.device("cuda" if (torch.cuda.is_available() and args.use_gpu) else "cpu")
+    device = torch.device("mps")
     nn_model = CLIPResnetSegmentationModel(device, args.num_classes)
     print("Unet with CLIP's encoder weights ready")
 
 elif args.model_name == 'PromptUNet':
     from models.prompt_based_unet import PromptUNet
-    device = torch.device("cuda" if (torch.cuda.is_available() and args.use_gpu) else "cpu")
+    device = torch.device("mps")
     nn_model = PromptUNet(device, args.num_classes)
     print("Promp Based Unet with CLIP's encoder weights ready")
 

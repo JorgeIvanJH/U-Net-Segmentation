@@ -171,7 +171,7 @@ def get_test_sample(image_path, mask_path):
 def evaluate_model_on_sample(nn_model, image, mask, show = False):
     nn_model.eval()
     with torch.no_grad():
-        logits = nn_model(image.unsqueeze(0).to("cpu"))
+        logits = nn_model(image.unsqueeze(0).to("mps"))
         predicted_classes = torch.argmax(logits, dim=1)
         segmentation_mask = predicted_classes[0].cpu().numpy()
     if show:
@@ -378,7 +378,7 @@ def visualize_noise_effect(model,image_cat_easy_back, mask_cat_easy_back,image_d
                                                                     pred_masks_cats, 
                                                                     dice_acc_cats)):
         # Plot noisy image
-        axes[0, i].imshow(noisy_image.permute(1, 2, 0).numpy())
+        axes[0, i].imshow(noisy_image.cpu().permute(1, 2, 0).numpy())
         axes[0, i].set_title(f"Cat - Noisy Image\n(cond={cond})", fontsize=25)
         axes[0, i].axis("off")
 
@@ -398,7 +398,7 @@ def visualize_noise_effect(model,image_cat_easy_back, mask_cat_easy_back,image_d
                                                                     pred_masks_dogs, 
                                                                     dice_acc_dogs)):
         # Plot noisy image
-        axes[0, i].imshow(noisy_image.permute(1, 2, 0).numpy())
+        axes[0, i].imshow(noisy_image.cpu().permute(1, 2, 0).numpy())
         axes[0, i].set_title(f"Dog - Noisy Image\n(cond={cond})", fontsize=25)
         axes[0, i].axis("off")
 

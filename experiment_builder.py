@@ -80,8 +80,9 @@ class ExperimentBuilder(nn.Module):
             self.model.to(self.device)  # sends the model from the cpu to the gpu
         else:
             self.device = torch.device("cpu")  # sets the device to be CPU
+        self.device = torch.device("mps")
+        self.model.to(self.device).to(torch.float32)  # sends the model from the cpu to the gpu
         print("Using ",self.device)
-
         self.train_data = train_data
         self.val_data = val_data
         self.test_data = test_data
@@ -110,7 +111,9 @@ class ExperimentBuilder(nn.Module):
         # Loss function
         class_weights = compute_class_weights(self.val_data, network_model.n_classes) # Classes weighted by their frequency in the dataset
         class_weights = class_weights**2 # Exponential weight to each class
-        class_weights[3] = 0 # NO WEIGHT TO THE BORDER CLASS
+        #print("Class weights before normalization: ", class_weights)
+        class_weights[1] = class_weights[1]*500
+        class_weights[3] = class_weights[3]/4# LESS WEIGHT TO THE BORDER CLASS
         print("Class weights: ", class_weights)
         if use_gpu:
             class_weights = class_weights.to(self.device)
@@ -254,10 +257,10 @@ class ExperimentBuilder(nn.Module):
     def run_train_iter(self, x, y, prompt):
 
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
-        x, y, prompt = x.to(device=self.device), y.to(device=self.device), prompt.to(device=self.device)   # send data to device as torch tensors
+        x, y, prompt = x.to(device=self.device).to(torch.float32), y.to(device=self.device).to(torch.float32), prompt.to(device=self.device).to(torch.float32)   # send data to device as torch tensors
         out = self.model(x, prompt) if self.model_name == "PromptUNet" else self.model(x) # forward the data in the model
 
-        loss = self.loss_criterion(out, y)  # compute loss
+        loss = self.loss_criterion(out, y).to(device=self.device)  # compute loss
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
@@ -274,9 +277,9 @@ class ExperimentBuilder(nn.Module):
 
         self.eval()  # sets the system to validation mode
         x, y, prompt = x.to(device=self.device), y.to(device=self.device), prompt.to(device=self.device)   # send data to device as torch tensors
-        out = self.model(x, prompt) if self.model_name == "PromptUNet" else self.model(x) # forward the data in the model
+        out = self.model(x, prompt).to(device=self.device) if self.model_name == "PromptUNet" else self.model(x).to(device=self.device) # forward the data in the model
 
-        loss = self.loss_criterion(out, y)  # compute loss
+        loss = self.loss_criterion(out, y).to(device=self.device)  # compute loss
 
         # Compute Intersection over Union
         iou = self.iou_score(out, y)  # get iou score for current iter
@@ -328,7 +331,7 @@ class ExperimentBuilder(nn.Module):
         state = torch.load(
             f=os.path.join(
                 model_save_dir, "{}_{}".format(model_save_name, str(model_idx))
-            )
+            ), weights_only=False
         )
         self.load_state_dict(state_dict=state["network"])
         return state, state["best_val_model_idx"], state["best_val_model_acc"]
