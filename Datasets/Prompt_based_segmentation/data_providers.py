@@ -8,49 +8,37 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import os
 from config import SEED, TRAIN_SIZE, IMG_SIZE
+import random
+random.seed(SEED)
+np.random.seed(SEED)
 
 
-PATH_TRAINVAL = 'Datasets/Prompt_based_segmentation/TrainVal'
-PATH_TEST = 'Datasets/Prompt_based_segmentation/Test'
+PATH_TRAINVAL = 'Datasets/Segmentation/TrainVal'
+PATH_TEST = 'Datasets/Segmentation/Test'
 
-test_image_path = os.path.join(PATH_TEST, 'images/')
-test_heatmap_path = os.path.join(PATH_TEST, 'prompts/')
-test_mask_path = os.path.join(PATH_TEST, 'masks/')
+test_image_path = os.path.join(PATH_TEST, 'color/')
+test_mask_path = os.path.join(PATH_TEST, 'label/')
+test_image_list_orig = sorted(os.listdir(test_image_path))
+test_mask_list_orig = sorted(os.listdir(test_mask_path))
 
-trainval_image_path = os.path.join(PATH_TRAINVAL, 'images/')
-trainval_heatmap_path = os.path.join(PATH_TRAINVAL, 'prompts/')
-trainval_mask_path = os.path.join(PATH_TRAINVAL, 'masks/')
+trainval_image_path = os.path.join(PATH_TRAINVAL, 'color/')
+trainval_mask_path = os.path.join(PATH_TRAINVAL, 'label/')
+trainval_image_list_orig = sorted(os.listdir(trainval_image_path))
+trainval_mask_list_orig = sorted(os.listdir(trainval_mask_path))
 
-# Only include image files
-valid_exts = ('.png', '.jpg', '.jpeg')
-test_image_list_orig = sorted([f for f in os.listdir(test_image_path) if f.lower().endswith(valid_exts)])
-test_heatmap_list_orig = sorted([f for f in os.listdir(test_heatmap_path) if f.lower().endswith(valid_exts)])
-test_mask_list_orig = sorted([f for f in os.listdir(test_mask_path) if f.lower().endswith(valid_exts)])
-
-trainval_image_list_orig = sorted([f for f in os.listdir(trainval_image_path) if f.lower().endswith(valid_exts)])
-trainval_heatmap_list_orig = sorted([f for f in os.listdir(trainval_heatmap_path) if f.lower().endswith(valid_exts)])
-trainval_mask_list_orig = sorted([f for f in os.listdir(trainval_mask_path) if f.lower().endswith(valid_exts)])
-
-
-
-test_paths_df = pd.DataFrame({"images":test_image_list_orig,"prompts": test_heatmap_list_orig,"masks": test_mask_list_orig})
+test_paths_df = pd.DataFrame({"images":test_image_list_orig,"masks": test_mask_list_orig})
 test_paths_df["path_images"] = test_image_path
-test_paths_df["path_prompts"] = test_heatmap_path
 test_paths_df["path_masks"] = test_mask_path
 test_paths_df["path_images"] = test_paths_df["path_images"] + test_paths_df["images"]
-test_paths_df["path_prompts"] = test_paths_df["path_prompts"] + test_paths_df["prompts"]
 test_paths_df["path_masks"] = test_paths_df["path_masks"] + test_paths_df["masks"]
-test_paths_df.drop(columns=["images","prompts","masks"],inplace=True)
+test_paths_df.drop(columns=["images","masks"],inplace=True)
 
-trainval_paths_df = pd.DataFrame(
-    {"images":trainval_image_list_orig,"prompts": trainval_heatmap_list_orig,"masks": trainval_mask_list_orig})
+trainval_paths_df = pd.DataFrame({"images":trainval_image_list_orig,"masks": trainval_mask_list_orig})
 trainval_paths_df["path_images"] = trainval_image_path
-trainval_paths_df["path_prompts"] = trainval_heatmap_path
 trainval_paths_df["path_masks"] = trainval_mask_path
 trainval_paths_df["path_images"] = trainval_paths_df["path_images"] + trainval_paths_df["images"]
-trainval_paths_df["path_prompts"] = trainval_paths_df["path_prompts"] + trainval_paths_df["prompts"]
 trainval_paths_df["path_masks"] = trainval_paths_df["path_masks"] + trainval_paths_df["masks"]
-trainval_paths_df.drop(columns=["images", "prompts","masks"],inplace=True)
+trainval_paths_df.drop(columns=["images","masks"],inplace=True)
 
 train_paths_df, val_paths_df = train_test_split(trainval_paths_df, train_size=TRAIN_SIZE, random_state=SEED)
 
@@ -58,34 +46,90 @@ train_paths_df, val_paths_df = train_test_split(trainval_paths_df, train_size=TR
 
 transform = A.Compose(
     [
-        A.Resize(IMG_SIZE, IMG_SIZE),  
-        #A.RandomCrop(width=IMG_SIZE, height=IMG_SIZE, p=1.0), # Randomly crop image
-        # A.Rotate(limit=35, p=1.0), # Rotate image
-        # A.HorizontalFlip(p=0.5), # Flip image horizontally
-        #A.RGBShift(
-        #    r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.5
-        #),  # Shift RGB colors
-        #A.RandomBrightnessContrast(p=0.5),  # Randomly change brightness and contrast
-        # A.RandomGamma(p=0.5), # Randomly change image gamma
-        # A.Blur(p=0.5), # Randomly blur image
-        # A.GaussNoise(p=0.5), # Randomly add gaussian noise
+        A.Resize(int(IMG_SIZE*1.1), int(IMG_SIZE*1.1)),  
+        A.RandomCrop(width=IMG_SIZE, height=IMG_SIZE, p=1.0), # Randomly crop image
+        A.Rotate(limit=35, p=1.0), # Rotate image
+        A.HorizontalFlip(p=0.5), # Flip image horizontally
+        A.RGBShift(
+            r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.5
+        ),  # Shift RGB colors
+        A.RandomBrightnessContrast(p=0.5),  # Randomly change brightness and contrast
+        A.RandomGamma(p=0.5), # Randomly change image gamma
+        A.Blur(p=0.5), # Randomly blur image
+        A.GaussNoise(p=0.5), # Randomly add gaussian noise
         A.HorizontalFlip(p=0.5),
+    ]
+)
+
+adjust = A.Compose(
+    [
+        A.Resize(int(IMG_SIZE), int(IMG_SIZE)),  
+    ]
+)
+
+totensor = A.Compose(
+    [
         ToTensorV2(),
     ]
 )
 
+def sample_point_from_mask(mask, elem_to_point, pixel_conf=10):
+    """Sample a point from the mask with a given pixel confidence."""
+    ys, xs = np.where(mask == elem_to_point)
+    if len(xs) == 0:
+        return None
+
+    indices = list(zip(ys, xs))
+    np.random.shuffle(indices)
+
+    for rand_y, rand_x in indices:
+        for y_pad in range(-pixel_conf, pixel_conf + 1):
+            for x_pad in range(-pixel_conf, pixel_conf + 1):
+                y = rand_y + y_pad
+                x = rand_x + x_pad
+                if 0 <= y < mask.shape[0] and 0 <= x < mask.shape[1]:
+                    if mask[y, x] != -1:
+                        return rand_x, rand_y
+
+    return None  # If no valid sample found after checking all
+
+def generate_heatmap(point, mask, sigma=5):
+    shape = mask.shape
+    heatmap = np.zeros(shape, dtype=np.float32)
+    if point:
+        x, y = point
+        heatmap[y, x] = 1
+        heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma)
+        heatmap = heatmap / np.max(heatmap)
+
+    region = mask[(heatmap > 0.5) & (mask != -1)]
+
+    if len(region) == 0:
+        return heatmap[np.newaxis, ...], None
+
+    values, counts = np.unique(region, return_counts=True)
+    filtered = [(int(v), int(c)) for v, c in zip(values, counts) if v in [1, 2]]
+    
+    if not filtered:
+        return heatmap
+    return heatmap
 
 class SegmentationDataset(Dataset):
     def __init__(self, dataframe, transform=None):
         self.dataframe = dataframe
-        self.transform = transform
+        self.transform = transform if transform else adjust
         self.color_map = {
+            (0, 0, 0): 0,  # Background
             (128, 0, 0): 1,  # Cat
             (0, 128, 0): 2,  # Dog
-            (0, 0, 0): 0,  # Background
             (255, 255, 255): 3,  # Border
         }
-
+        self.classes_preferences = {
+                               0: 0.2, # Background, 
+                               1: 0.5, # Cat
+                               2: 0.3, # Dog
+                               3:0 # Border
+                               }
     def __len__(self):
         return len(self.dataframe)
 
@@ -102,41 +146,48 @@ class SegmentationDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.dataframe.iloc[idx]["path_images"]
-        prompt_path = self.dataframe.iloc[idx]["path_prompts"]
         mask_path = self.dataframe.iloc[idx]["path_masks"]
 
-        # Load image and prompt in RGB
-        image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+        image = cv2.imread(image_path, cv2.IMREAD_COLOR)  # Image
         if image is None:
-            raise FileNotFoundError(f"Could not load image at path: {image_path}")
+            print(f"Could not load image at path: {image_path}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mask = cv2.imread(mask_path, cv2.IMREAD_COLOR)  # Mask
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
+        # Convert RGB mask to class index mask
+        mask = self.rgb_to_class(mask)
 
-        prompt = cv2.imread(prompt_path, cv2.IMREAD_GRAYSCALE)  # heatmap is single-channel
-        if prompt is None:
-            raise FileNotFoundError(f"Could not load prompt at path: {prompt_path}")
-        prompt = np.expand_dims(prompt, axis=-1)  # shape: (H, W, 1) for albumentations
 
-        # Load mask as grayscale (class indices)
-        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
-        if mask is None:
-            raise FileNotFoundError(f"Could not load mask at path: {mask_path}")
+        elems_in_mask = sorted(np.unique(mask))[:-1] # Exclude the last element which is the border
+        if len(elems_in_mask) == 2:
+            if elems_in_mask[1] == 2: # Dog is present
+                weights = [0.1,0.2]
+            else: # Cat is present
+                weights = [0.1, 0.5] 
+            elem_to_point = random.choices(elems_in_mask, weights=weights, k=1)[0]
+        else: # Both Cat and Dog are present
+            elem_to_point = random.choice(elems_in_mask)
 
-        # Albumentations expects all inputs as HWC
         if self.transform:
             transformed = self.transform(image=image, mask=mask)
             image, mask = transformed["image"], transformed["mask"]
-            prompt = self.transform(image=prompt)["image"]
 
-        # Normalize image and prompt (float32, [0, 1])
-        image = image / 255.0
-        prompt = prompt / 255.0
-        mask = mask / 255.0
+        point = sample_point_from_mask(mask,elem_to_point, pixel_conf=10)
+        if point is None:
+            point = sample_point_from_mask(mask, elem_to_point, pixel_conf=0)
 
-        # Ensure tensor types
+        heatmap = generate_heatmap(point, mask)
+        mask = (mask == elem_to_point).astype(np.uint8)
+
+        image = totensor(image=image)["image"].float()
+        mask = totensor(image=mask)["image"].squeeze(0).long()
+        heatmap = totensor(image=heatmap)["image"].float()
+
         mask = mask.clone().detach().long()
-        return image, mask, prompt
-
+        image = image / 255.0 
+        
+        return image, mask, heatmap # image*0 is a placeholder for the heatmap in the data providers for prompt based unet
 
 train_dataset = SegmentationDataset(train_paths_df, transform=transform)
-val_dataset = SegmentationDataset(val_paths_df, transform=transform)
-test_dataset = SegmentationDataset(test_paths_df, transform=transform)
+val_dataset = SegmentationDataset(val_paths_df, transform=None)
+test_dataset = SegmentationDataset(test_paths_df, transform=None)

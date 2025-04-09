@@ -109,17 +109,17 @@ class ExperimentBuilder(nn.Module):
         )
 
         # Loss function
-        class_weights = compute_class_weights(self.val_data, network_model.n_classes) # Classes weighted by their frequency in the dataset
-        class_weights = class_weights**2 # Exponential weight to each class
-        #print("Class weights before normalization: ", class_weights)
-        class_weights[1] = class_weights[1]*500
-        class_weights[3] = class_weights[3]/4# LESS WEIGHT TO THE BORDER CLASS
-        print("Class weights: ", class_weights)
-        if use_gpu:
-            class_weights = class_weights.to(self.device)
-        self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights).to(
-            self.device
-        )  # send the loss computation to the GPU 
+        if self.model_name == "PromptUNet":
+            print("No weight to classes in PromptUNet")
+            self.loss_criterion = nn.CrossEntropyLoss().to(self.device) 
+        else:
+            class_weights = compute_class_weights(self.val_data, network_model.n_classes) # Classes weighted by their frequency in the dataset
+            print("Class weights: ", class_weights)
+            if use_gpu:
+                class_weights = class_weights.to(self.device)
+            self.loss_criterion = nn.CrossEntropyLoss(weight=class_weights).to(
+                self.device
+            ) 
 
         # Generate the directory names
         self.experiment_folder = os.path.abspath(experiment_name)
